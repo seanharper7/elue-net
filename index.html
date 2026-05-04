@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elue — Sound Design & Composition</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    /* ── Variables ── */
+    :root {
+      --paper:       #F2EDE2;
+      --paper-dark:  #E8E0D0;
+      --ink:         #0D0B08;
+      --ink-mid:     #2C2820;
+      --ink-faint:   #5A5450;
+      --purple:      #7C5CBF;
+      --purple-mute: #A68AD0;
+      --purple-pale: #EDE6F8;
+      --serif:       'Cormorant Garamond', Georgia, serif;
+      --mono:        'Courier Prime', 'Courier New', monospace;
+    }
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 15px;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.2rem 2.5rem;
+      mix-blend-mode: multiply;
+    }
+
+    .nav-name {
+      font-family: var(--serif);
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .nav-links a {
+      opacity: 0.6;
+      transition: opacity 0.2s;
+      position: relative;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -2px; left: 0;
+      width: 0; height: 1px;
+      background: var(--ink);
+      transition: width 0.25s;
+    }
+
+    .nav-links a:hover { opacity: 1; }
+    .nav-links a:hover::after { width: 100%; }
+
+    /* ── Hero ── */
+    #hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      padding: 0 2.5rem;
+      padding-top: 5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-text {
+      position: relative;
+      z-index: 2;
+      padding-right: 2rem;
+    }
+
+    .hero-eyebrow {
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      opacity: 0.5;
+      margin-bottom: 1.2rem;
+    }
+
+    .hero-name {
+      font-family: var(--serif);
+      font-size: clamp(6rem, 14vw, 13rem);
+      font-weight: 700;
+      line-height: 0.88;
+      letter-spacing: -0.02em;
+      margin-bottom: 2rem;
+    }
+
+    .hero-name span {
+      display: block;
+      color: var(--purple);
+    }
+
+    .hero-tagline {
+      font-size: 0.95rem;
+      line-height: 1.8;
+      max-width: 38ch;
+      opacity: 0.75;
+      margin-bottom: 2.5rem;
+    }
+
+    .hero-links {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .hero-links a {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--ink);
+      padding-bottom: 2px;
+      opacity: 0.55;
+      transition: opacity 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    .hero-links a:hover {
+      opacity: 1;
+      color: var(--purple);
+      border-color: var(--purple);
+    }
+
+    .hero-image {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .hero-image img {
+      width: 100%;
+      max-width: 580px;
+      transform: rotate(1.5deg);
+      filter: contrast(1.08);
+      transition: transform 0.5s ease;
+    }
+
+    .hero-image img:hover {
+      transform: rotate(0deg) scale(1.02);
+    }
+
+    /* speech bubble decoration */
+    .speech-bubble {
+      position: absolute;
+      bottom: 15%;
+      left: -3rem;
+      background: var(--paper);
+      border: 1.5px solid var(--ink);
+      border-radius: 2px;
+      padding: 0.5rem 0.9rem;
+      font-size: 0.72rem;
+      font-style: italic;
+      font-family: var(--mono);
+      white-space: nowrap;
+      z-index: 3;
+      transform: rotate(-2deg);
+      box-shadow: 2px 2px 0 var(--ink);
+    }
+
+    .speech-bubble::before {
+      content: '';
+      position: absolute;
+      right: -12px; top: 50%;
+      transform: translateY(-50%);
+      border: 6px solid transparent;
+      border-left-color: var(--ink);
+    }
+
+    /* ── Section base ── */
+    section {
+      padding: 6rem 2.5rem;
+    }
+
+    .section-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      opacity: 0.4;
+      margin-bottom: 3rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .section-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: currentColor;
+      opacity: 0.3;
+    }
+
+    /* ── Work section ── */
+    #work {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    #work .section-label {
+      color: var(--paper);
+      opacity: 0.3;
+    }
+
+    .projects {
+      display: grid;
+      gap: 0;
+    }
+
+    .project {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 3rem;
+      padding: 3rem 0;
+      border-top: 1px solid rgba(242, 237, 226, 0.12);
+      position: relative;
+      transition: background 0.3s;
+    }
+
+    .project:last-child {
+      border-bottom: 1px solid rgba(242, 237, 226, 0.12);
+    }
+
+    .project:hover {
+      background: rgba(255,255,255,0.02);
+    }
+
+    .project-meta {
+      padding-top: 0.3rem;
+    }
+
+    .project-number {
+      font-size: 0.65rem;
+      letter-spacing: 0.2em;
+      opacity: 0.3;
+      margin-bottom: 0.8rem;
+    }
+
+    .project-title {
+      font-family: var(--serif);
+      font-size: 2.2rem;
+      font-weight: 600;
+      line-height: 1.1;
+      margin-bottom: 0.5rem;
+    }
+
+    .project-sub {
+      font-size: 0.75rem;
+      opacity: 0.4;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .project-body {}
+
+    .project-desc {
+      font-size: 0.9rem;
+      line-height: 1.8;
+      opacity: 0.65;
+      margin-bottom: 1.5rem;
+      max-width: 52ch;
+    }
+
+    .project-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .tag {
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: 1px solid rgba(242, 237, 226, 0.2);
+      padding: 0.25rem 0.6rem;
+      border-radius: 1px;
+      opacity: 0.6;
+    }
+
+    .project-link {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--purple-mute);
+      border-bottom: 1px solid var(--purple-mute);
+      padding-bottom: 2px;
+      transition: color 0.2s;
+      display: inline-block;
+    }
+
+    .project-link:hover {
+      color: var(--purple-pale);
+      border-color: var(--purple-pale);
+    }
+
+    .project-coming-soon {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      opacity: 0.3;
+      font-style: italic;
+    }
+
+    /* Doodle accent in work section */
+    .work-doodle {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 160px;
+      opacity: 0.06;
+      pointer-events: none;
+    }
+
+    /* ── Drawings section ── */
+    #drawings {
+      background: var(--paper-dark);
+    }
+
+    .drawings-intro {
+      max-width: 52ch;
+      font-size: 0.9rem;
+      line-height: 1.8;
+      opacity: 0.6;
+      margin-bottom: 3.5rem;
+    }
+
+    .drawings-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+    }
+
+    .drawing-item {
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .drawing-item img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      object-position: center;
+      filter: contrast(1.05);
+      transition: transform 0.5s ease, filter 0.3s;
+    }
+
+    .drawing-item:hover img {
+      transform: scale(1.04);
+      filter: contrast(1.1);
+    }
+
+    /* Large feature items */
+    .drawing-item.feature {
+      grid-column: span 2;
+    }
+
+    .drawing-item.feature img {
+      aspect-ratio: 2/1;
+    }
+
+    .drawing-item.tall img {
+      aspect-ratio: 3/4;
+    }
+
+    /* ── About section ── */
+    #about {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6rem;
+      align-items: start;
+    }
+
+    .about-text h2 {
+      font-family: var(--serif);
+      font-size: 3rem;
+      font-weight: 300;
+      line-height: 1.15;
+      margin-bottom: 2rem;
+      font-style: italic;
+    }
+
+    .about-text p {
+      font-size: 0.9rem;
+      line-height: 1.9;
+      opacity: 0.7;
+      margin-bottom: 1.2rem;
+      max-width: 50ch;
+    }
+
+    .about-credits {
+      margin-top: 3rem;
+    }
+
+    .about-credits h3 {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      opacity: 0.4;
+      margin-bottom: 1.2rem;
+    }
+
+    .credit-list {
+      list-style: none;
+    }
+
+    .credit-list li {
+      font-size: 0.82rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(13,11,8,0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 1rem;
+    }
+
+    .credit-name {
+      opacity: 0.8;
+    }
+
+    .credit-role {
+      opacity: 0.4;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .about-image {
+      position: sticky;
+      top: 6rem;
+    }
+
+    .about-image img {
+      width: 100%;
+      transform: rotate(-1deg);
+      filter: contrast(1.05);
+    }
+
+    .about-image-caption {
+      font-size: 0.7rem;
+      opacity: 0.35;
+      margin-top: 0.8rem;
+      font-style: italic;
+      text-align: right;
+    }
+
+    /* ── Contact / Footer ── */
+    #contact {
+      background: var(--ink);
+      color: var(--paper);
+      padding: 5rem 2.5rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: end;
+    }
+
+    .contact-left h2 {
+      font-family: var(--serif);
+      font-size: clamp(3rem, 7vw, 6rem);
+      font-weight: 300;
+      font-style: italic;
+      line-height: 1.05;
+      margin-bottom: 2rem;
+    }
+
+    .contact-email {
+      font-size: 1rem;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid rgba(242,237,226,0.3);
+      display: inline-block;
+      padding-bottom: 3px;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .contact-email:hover {
+      color: var(--purple-mute);
+      border-color: var(--purple-mute);
+    }
+
+    .contact-right {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      align-items: flex-end;
+    }
+
+    .social-links {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      align-items: flex-end;
+    }
+
+    .social-link {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      opacity: 0.4;
+      transition: opacity 0.2s, color 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .social-link::before {
+      content: '→';
+      opacity: 0;
+      transform: translateX(-6px);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .social-link:hover {
+      opacity: 1;
+      color: var(--purple-mute);
+    }
+
+    .social-link:hover::before {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .footer-note {
+      font-size: 0.65rem;
+      opacity: 0.2;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-top: 4rem;
+      grid-column: 1 / -1;
+      border-top: 1px solid rgba(242,237,226,0.08);
+      padding-top: 2rem;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .hero-text > * {
+      animation: fadeUp 0.7s ease forwards;
+      opacity: 0;
+    }
+
+    .hero-eyebrow { animation-delay: 0.1s; }
+    .hero-name    { animation-delay: 0.2s; }
+    .hero-tagline { animation-delay: 0.35s; }
+    .hero-links   { animation-delay: 0.5s; }
+
+    .hero-image {
+      animation: fadeUp 0.9s 0.3s ease forwards;
+      opacity: 0;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      #hero {
+        grid-template-columns: 1fr;
+        text-align: left;
+        padding-top: 6rem;
+      }
+
+      .hero-image {
+        justify-content: center;
+        margin-top: 2rem;
+      }
+
+      .speech-bubble {
+        left: 0;
+      }
+
+      .project {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+
+      .drawings-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .drawing-item.feature {
+        grid-column: span 2;
+      }
+
+      #about {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+      }
+
+      .about-image {
+        position: static;
+        order: -1;
+      }
+
+      #contact {
+        grid-template-columns: 1fr;
+        gap: 3rem;
+      }
+
+      .contact-right {
+        align-items: flex-start;
+      }
+
+      .social-links {
+        align-items: flex-start;
+      }
+    }
+
+    @media (max-width: 600px) {
+      nav { padding: 1rem 1.5rem; }
+      section { padding: 4rem 1.5rem; }
+      #hero { padding: 5rem 1.5rem 3rem; }
+      #contact { padding: 4rem 1.5rem; }
+
+      .drawings-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .drawing-item.feature {
+        grid-column: span 1;
+      }
+
+      .drawing-item.feature img {
+        aspect-ratio: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Navigation ── -->
+  <nav>
+    <div class="nav-name">Elue</div>
+    <ul class="nav-links">
+      <li><a href="#work">Work</a></li>
+      <li><a href="#drawings">Drawings</a></li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- ── Hero ── -->
+  <section id="hero">
+    <div class="hero-text">
+      <p class="hero-eyebrow">Sound design · Composition · Edmonton / Tallinn</p>
+      <h1 class="hero-name">
+        El<span>ue</span>
+      </h1>
+      <p class="hero-tagline">
+        I make sound for animation, film, and music.
+        Raw, intricate, and built to be listened to more than once.
+      </p>
+      <div class="hero-links">
+        <a href="https://bandcamp.com" target="_blank" rel="noopener">Bandcamp</a>
+        <a href="https://youtube.com" target="_blank" rel="noopener">YouTube</a>
+        <a href="https://instagram.com" target="_blank" rel="noopener">Instagram</a>
+        <a href="#work">Selected work ↓</a>
+      </div>
+    </div>
+
+    <div class="hero-image">
+      <div class="speech-bubble">please fill the canvas!!!</div>
+      <img
+        src="assets/scan.jpg"
+        alt="Ink drawing — dense composition of creatures, eyes and city skylines"
+        loading="eager"
+      >
+    </div>
+  </section>
+
+  <!-- ── Work ── -->
+  <section id="work">
+    <p class="section-label">Selected work</p>
+
+    <div class="projects">
+
+      <!-- Project 01 -->
+      <article class="project">
+        <div class="project-meta">
+          <p class="project-number">01</p>
+          <h2 class="project-title">Snooze Quest</h2>
+          <p class="project-sub">Victoria Vincent · Adult Swim · 2024–25</p>
+        </div>
+        <div class="project-body">
+          <p class="project-desc">
+            Original score and sound design for Victoria Vincent's animated short,
+            screened as part of Adult Swim's programming. Sound built from the
+            inside out — texture first, melody when earned.
+          </p>
+          <div class="project-tags">
+            <span class="tag">Animation scoring</span>
+            <span class="tag">Sound design</span>
+            <span class="tag">Short film</span>
+          </div>
+          <a class="project-link" href="#" target="_blank" rel="noopener">Watch →</a>
+        </div>
+        <img class="work-doodle" src="assets/fish.jpg" alt="" aria-hidden="true">
+      </article>
+
+      <!-- Project 02 -->
+      <article class="project">
+        <div class="project-meta">
+          <p class="project-number">02</p>
+          <h2 class="project-title">Dream Journal</h2>
+          <p class="project-sub">Rachel Walton · 2025</p>
+        </div>
+        <div class="project-body">
+          <p class="project-desc">
+            Full production, recording, and post-production on Rachel Walton's
+            folk pop album. Built to feel like the texture of a half-remembered
+            dream — folk structures that quietly come apart at the edges.
+          </p>
+          <div class="project-tags">
+            <span class="tag">Production</span>
+            <span class="tag">Recording</span>
+            <span class="tag">Post-production</span>
+            <span class="tag">Folk pop</span>
+          </div>
+          <a class="project-link" href="#" target="_blank" rel="noopener">Listen →</a>
+        </div>
+      </article>
+
+      <!-- Project 03 -->
+      <article class="project">
+        <div class="project-meta">
+          <p class="project-number">03</p>
+          <h2 class="project-title">Portrait<br>of The Issue</h2>
+          <p class="project-sub">Naima · 2026</p>
+        </div>
+        <div class="project-body">
+          <p class="project-desc">
+            Bedroom jazz pop album with Bella Contreras Woelfle, recorded
+            and produced in Edmonton over three years of writing sessions
+            that were really just long conversations with music in between.
+            Co-writer, producer, pianist, sound designer.
+          </p>
+          <div class="project-tags">
+            <span class="tag">Co-writing</span>
+            <span class="tag">Production</span>
+            <span class="tag">Piano</span>
+            <span class="tag">Jazz pop</span>
+          </div>
+          <span class="project-coming-soon">— coming summer 2026 —</span>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ── Drawings ── -->
+  <section id="drawings">
+    <p class="section-label">Drawings</p>
+    <p class="drawings-intro">
+      Ink on paper. Made during and between sessions.
+      Not separate from the music — more like the same impulse
+      with a different tool in hand.
+    </p>
+
+    <div class="drawings-grid">
+      <div class="drawing-item feature">
+        <img src="assets/city.jpg" alt="Dense ink cityscape with many-eyed creature — 'my dog smells bad. watch your step'">
+      </div>
+      <div class="drawing-item tall">
+        <img src="assets/please-fill.jpg" alt="Abstract ink composition — 'Please fill the canvas!!!'">
+      </div>
+      <div class="drawing-item">
+        <img src="assets/dense1.jpg" alt="Dense organic ink drawing with leaves, eyes, tendrils">
+      </div>
+      <div class="drawing-item">
+        <img src="assets/night.jpg" alt="Black ink night scene with moon and creature">
+      </div>
+      <div class="drawing-item">
+        <img src="assets/skull.jpg" alt="Geometric skull and leaf ink drawing">
+      </div>
+      <div class="drawing-item feature">
+        <img src="assets/jazz.jpg" alt="Ink drawing with purple — 'Fuck ya baby!! I love JAZZ!'">
+      </div>
+      <div class="drawing-item">
+        <img src="assets/wolf.jpg" alt="Ink creature — 'New distraction please and thank you'">
+      </div>
+      <div class="drawing-item">
+        <img src="assets/comics.jpg" alt="Comic panel — 'I love web-comics. This is a perfect moment.'">
+      </div>
+      <div class="drawing-item">
+        <img src="assets/ribbon.jpg" alt="Abstract ribbon ink structure">
+      </div>
+    </div>
+  </section>
+
+  <!-- ── About ── -->
+  <section id="about">
+    <div class="about-text">
+      <p class="section-label">About</p>
+      <h2>Sound designer,<br>composer,<br>producer.</h2>
+      <p>
+        I'm Elue — a sound designer and composer based in Edmonton, Alberta,
+        working primarily with animators and filmmakers who want something
+        that doesn't sound like it was made with a template.
+      </p>
+      <p>
+        My background is in production, jazz piano, and five years of making
+        electronic music in bedroom studios before I knew what I was doing.
+        I graduated from MacEwan University's music program in 2025.
+        I work in Ableton. I make noise.
+      </p>
+      <p>
+        I draw in the margins of everything. The doodles and the audio come
+        from the same place — raw, intricate, a little weird.
+        I think that's good.
+      </p>
+
+      <div class="about-credits">
+        <h3>Credits</h3>
+        <ul class="credit-list">
+          <li>
+            <span class="credit-name">Snooze Quest — Victoria Vincent / Adult Swim</span>
+            <span class="credit-role">Score · Sound design</span>
+          </li>
+          <li>
+            <span class="credit-name">Praise God, The Mouse Is Dead! — Trevor Mac</span>
+            <span class="credit-role">Score · Sound design</span>
+          </li>
+          <li>
+            <span class="credit-name">Dream Journal — Rachel Walton</span>
+            <span class="credit-role">Production · Recording</span>
+          </li>
+          <li>
+            <span class="credit-name">Long Sword — Malcolm Guglich</span>
+            <span class="credit-role">Production · Piano</span>
+          </li>
+          <li>
+            <span class="credit-name">GIRAF21 Indie Mixtape — Quickdraw</span>
+            <span class="credit-role">Scoring · Trailer</span>
+          </li>
+          <li>
+            <span class="credit-name">Portrait of The Issue — Naima</span>
+            <span class="credit-role">Co-writing · Production · Piano</span>
+          </li>
+          <li>
+            <span class="credit-name">Cash · Greedy · Mr CLUB</span>
+            <span class="credit-role">Solo releases</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="about-image">
+      <img src="assets/dense2.jpg" alt="Dense ink drawing — organic forms and architecture">
+      <p class="about-image-caption">somewhere between 2022 and now</p>
+    </div>
+  </section>
+
+  <!-- ── Contact ── -->
+  <section id="contact">
+    <div class="contact-left">
+      <h2>Let's<br>make<br>something.</h2>
+      <a class="contact-email" href="mailto:seanalexharper@gmail.com">
+        seanalexharper@gmail.com
+      </a>
+    </div>
+
+    <div class="contact-right">
+      <div class="social-links">
+        <a class="social-link" href="https://bandcamp.com" target="_blank" rel="noopener">
+          Bandcamp
+        </a>
+        <a class="social-link" href="https://youtube.com" target="_blank" rel="noopener">
+          YouTube
+        </a>
+        <a class="social-link" href="https://instagram.com" target="_blank" rel="noopener">
+          Instagram
+        </a>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      <span>Elue — Edmonton, Alberta</span>
+      <span>Sound design · Composition · Production</span>
+    </div>
+  </section>
+
+</body>
+</html>
