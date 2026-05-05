@@ -3,216 +3,144 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Elue — Sound Design & Composition</title>
+  <title>Elue</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 
   <style>
-    /* ── Variables ── */
     :root {
-      --paper:       #F2EDE2;
-      --paper-dark:  #E8E0D0;
-      --ink:         #0D0B08;
-      --ink-mid:     #2C2820;
-      --ink-faint:   #5A5450;
-      --purple:      #7C5CBF;
-      --purple-mute: #A68AD0;
-      --purple-pale: #EDE6F8;
-      --serif:       'Cormorant Garamond', Georgia, serif;
-      --mono:        'Courier Prime', 'Courier New', monospace;
+      --paper:    #F0EBE0;
+      --ink:      #0D0B08;
+      --purple:   #7C5CBF;
+      --header-h: 280px;
     }
 
-    /* ── Reset ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
 
     body {
       background: var(--paper);
       color: var(--ink);
-      font-family: var(--mono);
+      font-family: 'Courier Prime', 'Courier New', monospace;
       font-size: 15px;
       line-height: 1.7;
       overflow-x: hidden;
+      padding-top: var(--header-h);
+      transition: padding-top 0.5s ease;
     }
+
+    body.header-hidden { padding-top: 0; }
 
     a { color: inherit; text-decoration: none; }
     img { display: block; max-width: 100%; }
 
-    /* ── Nav ── */
-    nav {
+    /* ── Header ── */
+    #site-header {
       position: fixed;
       top: 0; left: 0; right: 0;
-      z-index: 100;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1.2rem 2.5rem;
-      mix-blend-mode: multiply;
-    }
-
-    .nav-name {
-      font-family: var(--serif);
-      font-size: 1.1rem;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .nav-links {
-      display: flex;
-      gap: 2rem;
-      list-style: none;
-      font-size: 0.8rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-    }
-
-    .nav-links a {
-      opacity: 0.6;
-      transition: opacity 0.2s;
-      position: relative;
-    }
-
-    .nav-links a::after {
-      content: '';
-      position: absolute;
-      bottom: -2px; left: 0;
-      width: 0; height: 1px;
-      background: var(--ink);
-      transition: width 0.25s;
-    }
-
-    .nav-links a:hover { opacity: 1; }
-    .nav-links a:hover::after { width: 100%; }
-
-    /* ── Hero ── */
-    #hero {
-      min-height: 100vh;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      align-items: center;
-      padding: 0 2.5rem;
-      padding-top: 5rem;
-      position: relative;
+      z-index: 200;
+      height: var(--header-h);
       overflow: hidden;
+      transform: translateY(0);
+      transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
     }
 
-    .hero-text {
-      position: relative;
-      z-index: 2;
-      padding-right: 2rem;
+    #site-header.hidden { transform: translateY(-100%); }
+
+    #site-header img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+      filter: contrast(1.08) brightness(1.02);
     }
 
-    .hero-eyebrow {
-      font-size: 0.75rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      opacity: 0.5;
-      margin-bottom: 1.2rem;
+    /* Transparent nav zones over drawn labels —
+       adjust percentages to match your actual scan */
+    .nav-zone {
+      position: absolute;
+      cursor: pointer;
     }
+    #nav-about   { bottom: 30%; left: 17%; width: 11%; height: 18%; }
+    #nav-contact { bottom: 30%; left: 57%; width: 13%; height: 18%; }
 
-    .hero-name {
-      font-family: var(--serif);
-      font-size: clamp(6rem, 14vw, 13rem);
-      font-weight: 700;
-      line-height: 0.88;
-      letter-spacing: -0.02em;
-      margin-bottom: 2rem;
-    }
-
-    .hero-name span {
-      display: block;
-      color: var(--purple);
-    }
-
-    .hero-tagline {
-      font-size: 0.95rem;
-      line-height: 1.8;
-      max-width: 38ch;
-      opacity: 0.75;
-      margin-bottom: 2.5rem;
-    }
-
-    .hero-links {
+    /* ── Leaf pull cord ── */
+    #leaf-pull {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 300;
       display: flex;
-      gap: 1.5rem;
-      flex-wrap: wrap;
+      flex-direction: column;
+      align-items: center;
+      cursor: grab;
+      user-select: none;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
     }
 
-    .hero-links a {
-      font-size: 0.75rem;
+    #leaf-pull.visible    { opacity: 1; pointer-events: all; }
+    #leaf-pull.grabbing   { cursor: grabbing; }
+
+    .pull-string {
+      width: 1px;
+      height: 32px;
+      background: var(--ink);
+      opacity: 0.35;
+    }
+
+    .pull-leaf {
+      width: 48px;
+      height: 48px;
+      animation: sway 3s ease-in-out infinite;
+      transform-origin: 50% 0%;
+    }
+
+    @keyframes sway {
+      0%,100% { transform: rotate(-6deg); }
+      50%      { transform: rotate(6deg); }
+    }
+
+    .pull-hint {
+      font-size: 0.58rem;
       letter-spacing: 0.15em;
       text-transform: uppercase;
-      border-bottom: 1px solid var(--ink);
-      padding-bottom: 2px;
-      opacity: 0.55;
-      transition: opacity 0.2s, color 0.2s, border-color 0.2s;
-    }
-
-    .hero-links a:hover {
-      opacity: 1;
-      color: var(--purple);
-      border-color: var(--purple);
-    }
-
-    .hero-image {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-    }
-
-    .hero-image img {
-      width: 100%;
-      max-width: 580px;
-      transform: rotate(1.5deg);
-      filter: contrast(1.08);
-      transition: transform 0.5s ease;
-    }
-
-    .hero-image img:hover {
-      transform: rotate(0deg) scale(1.02);
-    }
-
-    /* speech bubble decoration */
-    .speech-bubble {
-      position: absolute;
-      bottom: 15%;
-      left: -3rem;
-      background: var(--paper);
-      border: 1.5px solid var(--ink);
-      border-radius: 2px;
-      padding: 0.5rem 0.9rem;
-      font-size: 0.72rem;
-      font-style: italic;
-      font-family: var(--mono);
+      opacity: 0.25;
+      margin-top: 4px;
       white-space: nowrap;
-      z-index: 3;
-      transform: rotate(-2deg);
-      box-shadow: 2px 2px 0 var(--ink);
+      animation: pulse 4s ease-in-out infinite;
     }
 
-    .speech-bubble::before {
-      content: '';
-      position: absolute;
-      right: -12px; top: 50%;
-      transform: translateY(-50%);
-      border: 6px solid transparent;
-      border-left-color: var(--ink);
+    @keyframes pulse {
+      0%,100% { opacity: 0.12; }
+      50%      { opacity: 0.35; }
     }
 
-    /* ── Section base ── */
-    section {
-      padding: 6rem 2.5rem;
+    /* ── Physics canvas ── */
+    #physics-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: var(--header-h);
+      z-index: 210;
+      pointer-events: none;
+    }
+
+    /* ── Main ── */
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 4rem 2.5rem 2rem;
     }
 
     .section-label {
-      font-size: 0.7rem;
+      font-size: 0.68rem;
       letter-spacing: 0.25em;
       text-transform: uppercase;
-      opacity: 0.4;
-      margin-bottom: 3rem;
+      opacity: 0.32;
+      margin-bottom: 2.5rem;
       display: flex;
       align-items: center;
       gap: 1rem;
@@ -226,266 +154,159 @@
       opacity: 0.3;
     }
 
-    /* ── Work section ── */
-    #work {
-      background: var(--ink);
-      color: var(--paper);
-    }
-
-    #work .section-label {
-      color: var(--paper);
-      opacity: 0.3;
-    }
-
-    .projects {
-      display: grid;
-      gap: 0;
-    }
+    /* Work */
+    #work { margin-bottom: 6rem; }
 
     .project {
-      display: grid;
-      grid-template-columns: 1fr 2fr;
-      gap: 3rem;
-      padding: 3rem 0;
-      border-top: 1px solid rgba(242, 237, 226, 0.12);
-      position: relative;
-      transition: background 0.3s;
+      padding: 2.5rem 0;
+      border-top: 1px solid rgba(13,11,8,0.1);
     }
 
-    .project:last-child {
-      border-bottom: 1px solid rgba(242, 237, 226, 0.12);
-    }
-
-    .project:hover {
-      background: rgba(255,255,255,0.02);
-    }
-
-    .project-meta {
-      padding-top: 0.3rem;
-    }
+    .project:last-child { border-bottom: 1px solid rgba(13,11,8,0.1); }
 
     .project-number {
-      font-size: 0.65rem;
+      font-size: 0.6rem;
       letter-spacing: 0.2em;
-      opacity: 0.3;
-      margin-bottom: 0.8rem;
-    }
-
-    .project-title {
-      font-family: var(--serif);
-      font-size: 2.2rem;
-      font-weight: 600;
-      line-height: 1.1;
+      opacity: 0.28;
       margin-bottom: 0.5rem;
     }
 
-    .project-sub {
-      font-size: 0.75rem;
-      opacity: 0.4;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+    .project-title {
+      font-size: 1.75rem;
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 0.3rem;
     }
 
-    .project-body {}
+    .project-sub {
+      font-size: 0.7rem;
+      opacity: 0.38;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
 
     .project-desc {
-      font-size: 0.9rem;
-      line-height: 1.8;
-      opacity: 0.65;
-      margin-bottom: 1.5rem;
+      font-size: 0.87rem;
+      opacity: 0.62;
       max-width: 52ch;
+      margin-bottom: 1rem;
     }
 
     .project-tags {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 1.5rem;
+      gap: 0.35rem;
+      margin-bottom: 1rem;
     }
 
     .tag {
-      font-size: 0.65rem;
-      letter-spacing: 0.12em;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      border: 1px solid rgba(242, 237, 226, 0.2);
-      padding: 0.25rem 0.6rem;
-      border-radius: 1px;
-      opacity: 0.6;
+      border: 1px solid rgba(13,11,8,0.18);
+      padding: 0.18rem 0.45rem;
     }
 
     .project-link {
-      font-size: 0.75rem;
-      letter-spacing: 0.15em;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
       text-transform: uppercase;
-      color: var(--purple-mute);
-      border-bottom: 1px solid var(--purple-mute);
-      padding-bottom: 2px;
-      transition: color 0.2s;
-      display: inline-block;
+      border-bottom: 1px solid currentColor;
+      padding-bottom: 1px;
+      opacity: 0.48;
+      transition: opacity 0.2s, color 0.2s;
     }
 
-    .project-link:hover {
-      color: var(--purple-pale);
-      border-color: var(--purple-pale);
-    }
+    .project-link:hover { opacity: 1; color: var(--purple); }
+    .project-soon { font-size: 0.7rem; opacity: 0.22; font-style: italic; }
 
-    .project-coming-soon {
-      font-size: 0.75rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      opacity: 0.3;
-      font-style: italic;
-    }
-
-    /* Doodle accent in work section */
-    .work-doodle {
-      position: absolute;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 160px;
-      opacity: 0.06;
-      pointer-events: none;
-    }
-
-    /* ── Drawings section ── */
-    #drawings {
-      background: var(--paper-dark);
-    }
+    /* Drawings */
+    #drawings { margin-bottom: 6rem; }
 
     .drawings-intro {
-      max-width: 52ch;
-      font-size: 0.9rem;
-      line-height: 1.8;
-      opacity: 0.6;
-      margin-bottom: 3.5rem;
+      font-size: 0.87rem;
+      opacity: 0.52;
+      max-width: 48ch;
+      margin-bottom: 2rem;
     }
 
     .drawings-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-    }
-
-    .drawing-item {
-      overflow: hidden;
-      position: relative;
-      cursor: pointer;
+      grid-template-columns: repeat(3,1fr);
+      gap: 0.7rem;
     }
 
     .drawing-item img {
       width: 100%;
       aspect-ratio: 1;
       object-fit: cover;
-      object-position: center;
       filter: contrast(1.05);
-      transition: transform 0.5s ease, filter 0.3s;
+      transition: transform 0.4s ease;
     }
 
-    .drawing-item:hover img {
-      transform: scale(1.04);
-      filter: contrast(1.1);
-    }
+    .drawing-item:hover img { transform: scale(1.03); }
+    .drawing-item.wide { grid-column: span 2; }
+    .drawing-item.wide img { aspect-ratio: 2/1; }
 
-    /* Large feature items */
-    .drawing-item.feature {
-      grid-column: span 2;
-    }
+    /* About */
+    #about { margin-bottom: 6rem; }
 
-    .drawing-item.feature img {
-      aspect-ratio: 2/1;
-    }
-
-    .drawing-item.tall img {
-      aspect-ratio: 3/4;
-    }
-
-    /* ── About section ── */
-    #about {
+    .about-body {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6rem;
+      grid-template-columns: 3fr 2fr;
+      gap: 4rem;
       align-items: start;
     }
 
-    .about-text h2 {
-      font-family: var(--serif);
-      font-size: 3rem;
-      font-weight: 300;
-      line-height: 1.15;
-      margin-bottom: 2rem;
-      font-style: italic;
-    }
-
     .about-text p {
-      font-size: 0.9rem;
-      line-height: 1.9;
-      opacity: 0.7;
-      margin-bottom: 1.2rem;
+      font-size: 0.87rem;
+      opacity: 0.62;
       max-width: 50ch;
+      margin-bottom: 1rem;
     }
 
-    .about-credits {
-      margin-top: 3rem;
-    }
+    .credits-block { margin-top: 2.5rem; }
 
-    .about-credits h3 {
-      font-size: 0.7rem;
+    .credits-block h3 {
+      font-size: 0.62rem;
       letter-spacing: 0.2em;
       text-transform: uppercase;
-      opacity: 0.4;
-      margin-bottom: 1.2rem;
+      opacity: 0.32;
+      margin-bottom: 0.8rem;
     }
 
-    .credit-list {
-      list-style: none;
-    }
+    .credit-list { list-style: none; }
 
     .credit-list li {
-      font-size: 0.82rem;
-      padding: 0.6rem 0;
-      border-bottom: 1px solid rgba(13,11,8,0.08);
+      font-size: 0.78rem;
+      padding: 0.45rem 0;
+      border-bottom: 1px solid rgba(13,11,8,0.07);
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
       gap: 1rem;
-    }
-
-    .credit-name {
-      opacity: 0.8;
+      align-items: baseline;
     }
 
     .credit-role {
-      opacity: 0.4;
-      font-size: 0.72rem;
-      letter-spacing: 0.08em;
+      font-size: 0.62rem;
+      opacity: 0.32;
       text-transform: uppercase;
+      letter-spacing: 0.08em;
       white-space: nowrap;
-    }
-
-    .about-image {
-      position: sticky;
-      top: 6rem;
     }
 
     .about-image img {
       width: 100%;
-      transform: rotate(-1deg);
+      transform: rotate(-1.5deg);
       filter: contrast(1.05);
     }
 
-    .about-image-caption {
-      font-size: 0.7rem;
-      opacity: 0.35;
-      margin-top: 0.8rem;
-      font-style: italic;
-      text-align: right;
-    }
-
-    /* ── Contact / Footer ── */
+    /* Contact */
     #contact {
       background: var(--ink);
       color: var(--paper);
+      margin: 0 -2.5rem;
       padding: 5rem 2.5rem;
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -493,431 +314,455 @@
       align-items: end;
     }
 
-    .contact-left h2 {
-      font-family: var(--serif);
-      font-size: clamp(3rem, 7vw, 6rem);
-      font-weight: 300;
+    .contact-heading {
+      font-size: clamp(2.5rem,6vw,5rem);
+      font-weight: 700;
       font-style: italic;
-      line-height: 1.05;
+      line-height: 1.0;
       margin-bottom: 2rem;
     }
 
     .contact-email {
-      font-size: 1rem;
-      letter-spacing: 0.05em;
-      border-bottom: 1px solid rgba(242,237,226,0.3);
-      display: inline-block;
-      padding-bottom: 3px;
-      transition: border-color 0.2s, color 0.2s;
+      font-size: 0.88rem;
+      border-bottom: 1px solid rgba(242,237,226,0.28);
+      padding-bottom: 2px;
+      transition: color 0.2s;
     }
 
-    .contact-email:hover {
-      color: var(--purple-mute);
-      border-color: var(--purple-mute);
-    }
-
-    .contact-right {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
-      align-items: flex-end;
-    }
+    .contact-email:hover { color: #A68AD0; }
 
     .social-links {
       display: flex;
       flex-direction: column;
-      gap: 0.8rem;
       align-items: flex-end;
+      gap: 1rem;
     }
 
     .social-link {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       letter-spacing: 0.15em;
       text-transform: uppercase;
-      opacity: 0.4;
+      opacity: 0.38;
       transition: opacity 0.2s, color 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
     }
 
-    .social-link::before {
-      content: '→';
-      opacity: 0;
-      transform: translateX(-6px);
-      transition: opacity 0.2s, transform 0.2s;
-    }
+    .social-link:hover { opacity: 1; color: #A68AD0; }
 
-    .social-link:hover {
-      opacity: 1;
-      color: var(--purple-mute);
-    }
-
-    .social-link:hover::before {
-      opacity: 1;
-      transform: translateX(0);
-    }
-
-    .footer-note {
-      font-size: 0.65rem;
-      opacity: 0.2;
+    .footer-bar {
+      grid-column: 1/-1;
+      border-top: 1px solid rgba(242,237,226,0.08);
+      padding-top: 1.8rem;
+      font-size: 0.6rem;
+      opacity: 0.18;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      margin-top: 4rem;
-      grid-column: 1 / -1;
-      border-top: 1px solid rgba(242,237,226,0.08);
-      padding-top: 2rem;
       display: flex;
       justify-content: space-between;
     }
 
-    /* ── Animations ── */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(24px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .hero-text > * {
-      animation: fadeUp 0.7s ease forwards;
-      opacity: 0;
-    }
-
-    .hero-eyebrow { animation-delay: 0.1s; }
-    .hero-name    { animation-delay: 0.2s; }
-    .hero-tagline { animation-delay: 0.35s; }
-    .hero-links   { animation-delay: 0.5s; }
-
-    .hero-image {
-      animation: fadeUp 0.9s 0.3s ease forwards;
-      opacity: 0;
-    }
-
-    /* ── Responsive ── */
-    @media (max-width: 900px) {
-      #hero {
-        grid-template-columns: 1fr;
-        text-align: left;
-        padding-top: 6rem;
-      }
-
-      .hero-image {
-        justify-content: center;
-        margin-top: 2rem;
-      }
-
-      .speech-bubble {
-        left: 0;
-      }
-
-      .project {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-      }
-
-      .drawings-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .drawing-item.feature {
-        grid-column: span 2;
-      }
-
-      #about {
-        grid-template-columns: 1fr;
-        gap: 3rem;
-      }
-
-      .about-image {
-        position: static;
-        order: -1;
-      }
-
-      #contact {
-        grid-template-columns: 1fr;
-        gap: 3rem;
-      }
-
-      .contact-right {
-        align-items: flex-start;
-      }
-
-      .social-links {
-        align-items: flex-start;
-      }
-    }
-
-    @media (max-width: 600px) {
-      nav { padding: 1rem 1.5rem; }
-      section { padding: 4rem 1.5rem; }
-      #hero { padding: 5rem 1.5rem 3rem; }
-      #contact { padding: 4rem 1.5rem; }
-
-      .drawings-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .drawing-item.feature {
-        grid-column: span 1;
-      }
-
-      .drawing-item.feature img {
-        aspect-ratio: 1;
-      }
+    /* Responsive */
+    @media (max-width: 700px) {
+      main { padding: 3rem 1.5rem 2rem; }
+      .drawings-grid { grid-template-columns: repeat(2,1fr); }
+      .about-body { grid-template-columns: 1fr; }
+      .about-image { order: -1; }
+      #contact { grid-template-columns: 1fr; margin: 0 -1.5rem; padding: 4rem 1.5rem; }
+      .social-links { align-items: flex-start; }
     }
   </style>
 </head>
 <body>
 
-  <!-- ── Navigation ── -->
-  <nav>
-    <div class="nav-name">Elue</div>
-    <ul class="nav-links">
-      <li><a href="#work">Work</a></li>
-      <li><a href="#drawings">Drawings</a></li>
-      <li><a href="#about">About</a></li>
-      <li><a href="#contact">Contact</a></li>
-    </ul>
-  </nav>
+  <header id="site-header">
+    <img
+      src="assets/header.jpg"
+      alt="Elue hand-drawn header — ink drawing with creatures, About and Contact labels, leaves, and a figure with dangling feet"
+    >
+    <div class="nav-zone" id="nav-about"   title="About"></div>
+    <div class="nav-zone" id="nav-contact" title="Contact"></div>
+  </header>
 
-  <!-- ── Hero ── -->
-  <section id="hero">
-    <div class="hero-text">
-      <p class="hero-eyebrow">Sound design · Composition · Edmonton / Tallinn</p>
-      <h1 class="hero-name">
-        El<span>ue</span>
-      </h1>
-      <p class="hero-tagline">
-        I make sound for animation, film, and music.
-        Raw, intricate, and built to be listened to more than once.
+  <canvas id="physics-canvas"></canvas>
+
+  <div id="leaf-pull" aria-label="Pull to reveal header">
+    <div class="pull-string" id="pull-string"></div>
+    <!-- SVG placeholder leaf — replace with your own drawn and scanned leaf -->
+    <svg class="pull-leaf" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M24 3 C9 9,3 27,12 38 C17 44,24 46,24 46 C24 46,31 44,36 38 C45 27,39 9,24 3Z"
+            fill="none" stroke="#0D0B08" stroke-width="1.5" stroke-linecap="round"/>
+      <line x1="24" y1="3" x2="24" y2="46" stroke="#0D0B08" stroke-width="0.9" stroke-linecap="round" opacity="0.35"/>
+      <path d="M24 14 L17 20 M24 22 L31 27 M24 32 L16 36"
+            stroke="#0D0B08" stroke-width="0.7" stroke-linecap="round" opacity="0.35"/>
+    </svg>
+    <span class="pull-hint">pull to open</span>
+  </div>
+
+  <main>
+
+    <section id="work">
+      <p class="section-label">Selected work</p>
+
+      <article class="project">
+        <p class="project-number">01</p>
+        <h2 class="project-title">Snooze Quest</h2>
+        <p class="project-sub">Victoria Vincent · Adult Swim · 2024–25</p>
+        <p class="project-desc">
+          Original score and sound design for Victoria Vincent's animated short,
+          screened as part of Adult Swim's programming.
+          Sound built from texture first, melody when earned.
+        </p>
+        <div class="project-tags">
+          <span class="tag">Animation scoring</span>
+          <span class="tag">Sound design</span>
+          <span class="tag">Short film</span>
+        </div>
+        <a class="project-link" href="#" target="_blank" rel="noopener">Watch →</a>
+      </article>
+
+      <article class="project">
+        <p class="project-number">02</p>
+        <h2 class="project-title">Dream Journal</h2>
+        <p class="project-sub">Rachel Walton · 2025</p>
+        <p class="project-desc">
+          Full production, recording, and post-production on Rachel Walton's
+          folk pop album. Folk structures that quietly come apart at the edges.
+        </p>
+        <div class="project-tags">
+          <span class="tag">Production</span>
+          <span class="tag">Recording</span>
+          <span class="tag">Post-production</span>
+        </div>
+        <a class="project-link" href="#" target="_blank" rel="noopener">Listen →</a>
+      </article>
+
+      <article class="project">
+        <p class="project-number">03</p>
+        <h2 class="project-title">Portrait of The Issue</h2>
+        <p class="project-sub">Naima · Summer 2026</p>
+        <p class="project-desc">
+          Bedroom jazz pop album with Bella Contreras Woelfle.
+          Three years of writing sessions that were mostly long conversations
+          with music in between. Co-writer, producer, pianist, sound designer.
+        </p>
+        <div class="project-tags">
+          <span class="tag">Co-writing</span>
+          <span class="tag">Production</span>
+          <span class="tag">Jazz pop</span>
+        </div>
+        <span class="project-soon">— coming summer 2026 —</span>
+      </article>
+
+    </section>
+
+    <section id="drawings">
+      <p class="section-label">Drawings</p>
+      <p class="drawings-intro">
+        Ink on paper. Made during and between sessions.
+        Not separate from the music.
       </p>
-      <div class="hero-links">
-        <a href="https://bandcamp.com" target="_blank" rel="noopener">Bandcamp</a>
-        <a href="https://youtube.com" target="_blank" rel="noopener">YouTube</a>
-        <a href="https://instagram.com" target="_blank" rel="noopener">Instagram</a>
-        <a href="#work">Selected work ↓</a>
-      </div>
-    </div>
-
-    <div class="hero-image">
-      <div class="speech-bubble">please fill the canvas!!!</div>
-      <img
-        src="assets/scan.jpg"
-        alt="Ink drawing — dense composition of creatures, eyes and city skylines"
-        loading="eager"
-      >
-    </div>
-  </section>
-
-  <!-- ── Work ── -->
-  <section id="work">
-    <p class="section-label">Selected work</p>
-
-    <div class="projects">
-
-      <!-- Project 01 -->
-      <article class="project">
-        <div class="project-meta">
-          <p class="project-number">01</p>
-          <h2 class="project-title">Snooze Quest</h2>
-          <p class="project-sub">Victoria Vincent · Adult Swim · 2024–25</p>
+      <div class="drawings-grid">
+        <div class="drawing-item wide">
+          <img src="assets/city.jpg" alt="Dense ink cityscape — my dog smells bad, watch your step">
         </div>
-        <div class="project-body">
-          <p class="project-desc">
-            Original score and sound design for Victoria Vincent's animated short,
-            screened as part of Adult Swim's programming. Sound built from the
-            inside out — texture first, melody when earned.
-          </p>
-          <div class="project-tags">
-            <span class="tag">Animation scoring</span>
-            <span class="tag">Sound design</span>
-            <span class="tag">Short film</span>
-          </div>
-          <a class="project-link" href="#" target="_blank" rel="noopener">Watch →</a>
+        <div class="drawing-item">
+          <img src="assets/please-fill.jpg" alt="Please fill the canvas!!!">
         </div>
-        <img class="work-doodle" src="assets/fish.jpg" alt="" aria-hidden="true">
-      </article>
-
-      <!-- Project 02 -->
-      <article class="project">
-        <div class="project-meta">
-          <p class="project-number">02</p>
-          <h2 class="project-title">Dream Journal</h2>
-          <p class="project-sub">Rachel Walton · 2025</p>
+        <div class="drawing-item">
+          <img src="assets/night.jpg" alt="Black ink night scene">
         </div>
-        <div class="project-body">
-          <p class="project-desc">
-            Full production, recording, and post-production on Rachel Walton's
-            folk pop album. Built to feel like the texture of a half-remembered
-            dream — folk structures that quietly come apart at the edges.
-          </p>
-          <div class="project-tags">
-            <span class="tag">Production</span>
-            <span class="tag">Recording</span>
-            <span class="tag">Post-production</span>
-            <span class="tag">Folk pop</span>
-          </div>
-          <a class="project-link" href="#" target="_blank" rel="noopener">Listen →</a>
+        <div class="drawing-item">
+          <img src="assets/skull.jpg" alt="Geometric skull and leaves">
         </div>
-      </article>
-
-      <!-- Project 03 -->
-      <article class="project">
-        <div class="project-meta">
-          <p class="project-number">03</p>
-          <h2 class="project-title">Portrait<br>of The Issue</h2>
-          <p class="project-sub">Naima · 2026</p>
+        <div class="drawing-item wide">
+          <img src="assets/jazz.jpg" alt="Fuck ya baby!! I love JAZZ!">
         </div>
-        <div class="project-body">
-          <p class="project-desc">
-            Bedroom jazz pop album with Bella Contreras Woelfle, recorded
-            and produced in Edmonton over three years of writing sessions
-            that were really just long conversations with music in between.
-            Co-writer, producer, pianist, sound designer.
-          </p>
-          <div class="project-tags">
-            <span class="tag">Co-writing</span>
-            <span class="tag">Production</span>
-            <span class="tag">Piano</span>
-            <span class="tag">Jazz pop</span>
-          </div>
-          <span class="project-coming-soon">— coming summer 2026 —</span>
+        <div class="drawing-item">
+          <img src="assets/wolf.jpg" alt="New distraction please and thank you">
         </div>
-      </article>
+        <div class="drawing-item">
+          <img src="assets/comics.jpg" alt="I already miss it. This is a perfect moment.">
+        </div>
+        <div class="drawing-item">
+          <img src="assets/dense1.jpg" alt="Dense organic ink drawing">
+        </div>
+      </div>
+    </section>
 
-    </div>
-  </section>
-
-  <!-- ── Drawings ── -->
-  <section id="drawings">
-    <p class="section-label">Drawings</p>
-    <p class="drawings-intro">
-      Ink on paper. Made during and between sessions.
-      Not separate from the music — more like the same impulse
-      with a different tool in hand.
-    </p>
-
-    <div class="drawings-grid">
-      <div class="drawing-item feature">
-        <img src="assets/city.jpg" alt="Dense ink cityscape with many-eyed creature — 'my dog smells bad. watch your step'">
-      </div>
-      <div class="drawing-item tall">
-        <img src="assets/please-fill.jpg" alt="Abstract ink composition — 'Please fill the canvas!!!'">
-      </div>
-      <div class="drawing-item">
-        <img src="assets/dense1.jpg" alt="Dense organic ink drawing with leaves, eyes, tendrils">
-      </div>
-      <div class="drawing-item">
-        <img src="assets/night.jpg" alt="Black ink night scene with moon and creature">
-      </div>
-      <div class="drawing-item">
-        <img src="assets/skull.jpg" alt="Geometric skull and leaf ink drawing">
-      </div>
-      <div class="drawing-item feature">
-        <img src="assets/jazz.jpg" alt="Ink drawing with purple — 'Fuck ya baby!! I love JAZZ!'">
-      </div>
-      <div class="drawing-item">
-        <img src="assets/wolf.jpg" alt="Ink creature — 'New distraction please and thank you'">
-      </div>
-      <div class="drawing-item">
-        <img src="assets/comics.jpg" alt="Comic panel — 'I love web-comics. This is a perfect moment.'">
-      </div>
-      <div class="drawing-item">
-        <img src="assets/ribbon.jpg" alt="Abstract ribbon ink structure">
-      </div>
-    </div>
-  </section>
-
-  <!-- ── About ── -->
-  <section id="about">
-    <div class="about-text">
+    <section id="about">
       <p class="section-label">About</p>
-      <h2>Sound designer,<br>composer,<br>producer.</h2>
-      <p>
-        I'm Elue — a sound designer and composer based in Edmonton, Alberta,
-        working primarily with animators and filmmakers who want something
-        that doesn't sound like it was made with a template.
-      </p>
-      <p>
-        My background is in production, jazz piano, and five years of making
-        electronic music in bedroom studios before I knew what I was doing.
-        I graduated from MacEwan University's music program in 2025.
-        I work in Ableton. I make noise.
-      </p>
-      <p>
-        I draw in the margins of everything. The doodles and the audio come
-        from the same place — raw, intricate, a little weird.
-        I think that's good.
-      </p>
-
-      <div class="about-credits">
-        <h3>Credits</h3>
-        <ul class="credit-list">
-          <li>
-            <span class="credit-name">Snooze Quest — Victoria Vincent / Adult Swim</span>
-            <span class="credit-role">Score · Sound design</span>
-          </li>
-          <li>
-            <span class="credit-name">Praise God, The Mouse Is Dead! — Trevor Mac</span>
-            <span class="credit-role">Score · Sound design</span>
-          </li>
-          <li>
-            <span class="credit-name">Dream Journal — Rachel Walton</span>
-            <span class="credit-role">Production · Recording</span>
-          </li>
-          <li>
-            <span class="credit-name">Long Sword — Malcolm Guglich</span>
-            <span class="credit-role">Production · Piano</span>
-          </li>
-          <li>
-            <span class="credit-name">GIRAF21 Indie Mixtape — Quickdraw</span>
-            <span class="credit-role">Scoring · Trailer</span>
-          </li>
-          <li>
-            <span class="credit-name">Portrait of The Issue — Naima</span>
-            <span class="credit-role">Co-writing · Production · Piano</span>
-          </li>
-          <li>
-            <span class="credit-name">Cash · Greedy · Mr CLUB</span>
-            <span class="credit-role">Solo releases</span>
-          </li>
-        </ul>
+      <div class="about-body">
+        <div class="about-text">
+          <p>
+            I'm Elue — a sound designer and composer based in Edmonton, Alberta.
+            I work primarily with animators and filmmakers who want something
+            that doesn't sound like it came from a library.
+          </p>
+          <p>
+            My background is in production, jazz piano, and making electronic
+            music in bedroom studios since I was twelve.
+            MacEwan University music program, graduated 2025.
+            I work in Ableton. I make noise.
+          </p>
+          <p>
+            The drawings and the audio come from the same place —
+            raw, intricate, a little weird. I think that's good.
+          </p>
+          <div class="credits-block">
+            <h3>Credits</h3>
+            <ul class="credit-list">
+              <li>Snooze Quest — Victoria Vincent / Adult Swim <span class="credit-role">Score · Sound design</span></li>
+              <li>Praise God, The Mouse Is Dead! — Trevor Mac  <span class="credit-role">Score · Sound design</span></li>
+              <li>Dream Journal — Rachel Walton                <span class="credit-role">Production · Recording</span></li>
+              <li>Long Sword — Malcolm Guglich                 <span class="credit-role">Production · Piano</span></li>
+              <li>GIRAF21 Indie Mixtape — Quickdraw             <span class="credit-role">Scoring</span></li>
+              <li>Portrait of The Issue — Naima                <span class="credit-role">Co-writing · Production · Piano</span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="about-image">
+          <img src="assets/dense2.jpg" alt="Dense organic ink drawing — leaves, eyes, architecture">
+        </div>
       </div>
-    </div>
+    </section>
 
-    <div class="about-image">
-      <img src="assets/dense2.jpg" alt="Dense ink drawing — organic forms and architecture">
-      <p class="about-image-caption">somewhere between 2022 and now</p>
-    </div>
-  </section>
-
-  <!-- ── Contact ── -->
-  <section id="contact">
-    <div class="contact-left">
-      <h2>Let's<br>make<br>something.</h2>
-      <a class="contact-email" href="mailto:seanalexharper@gmail.com">
-        seanalexharper@gmail.com
-      </a>
-    </div>
-
-    <div class="contact-right">
-      <div class="social-links">
-        <a class="social-link" href="https://bandcamp.com" target="_blank" rel="noopener">
-          Bandcamp
-        </a>
-        <a class="social-link" href="https://youtube.com" target="_blank" rel="noopener">
-          YouTube
-        </a>
-        <a class="social-link" href="https://instagram.com" target="_blank" rel="noopener">
-          Instagram
-        </a>
+    <section id="contact">
+      <div class="contact-left">
+        <h2 class="contact-heading">Let's<br>make<br>something.</h2>
+        <a class="contact-email" href="mailto:elueelephant@gmail.com">elueelephant@gmail.com</a>
       </div>
-    </div>
+      <div class="contact-right">
+        <div class="social-links">
+          <a class="social-link" href="https://bandcamp.com"   target="_blank" rel="noopener">Bandcamp</a>
+          <a class="social-link" href="https://youtube.com"    target="_blank" rel="noopener">YouTube</a>
+          <a class="social-link" href="https://instagram.com"  target="_blank" rel="noopener">Instagram</a>
+        </div>
+      </div>
+      <div class="footer-bar">
+        <span>Elue · elue.net</span>
+        <span>Edmonton · Sound design · Composition · Production</span>
+      </div>
+    </section>
 
-    <div class="footer-note">
-      <span>Elue — Edmonton, Alberta</span>
-      <span>Sound design · Composition · Production</span>
-    </div>
-  </section>
+  </main>
+
+  <script>
+  (function() {
+    const header   = document.getElementById('site-header');
+    const leafPull = document.getElementById('leaf-pull');
+    const pullStr  = document.getElementById('pull-string');
+    const body     = document.body;
+    const HEADER_H = 280;
+    const PULL_THRESHOLD = 80;
+
+    /* ── 1. Scroll hide/show ── */
+    let lastScroll = 0;
+    let isHidden   = false;
+
+    function hideHeader() {
+      if (isHidden) return;
+      isHidden = true;
+      header.classList.add('hidden');
+      body.classList.add('header-hidden');
+      leafPull.classList.add('visible');
+    }
+
+    function showHeader() {
+      if (!isHidden) return;
+      isHidden = false;
+      header.classList.remove('hidden');
+      body.classList.remove('header-hidden');
+      leafPull.classList.remove('visible');
+      header.style.transform = '';
+      header.style.transition = '';
+    }
+
+    window.addEventListener('scroll', () => {
+      const s = window.scrollY;
+      if (s > HEADER_H * 0.35 && s > lastScroll) hideHeader();
+      else if (s < 8) showHeader();
+      lastScroll = s;
+    }, { passive: true });
+
+    /* ── 2. Leaf pull cord ── */
+    let dragging = false, dragStart = 0, dragDelta = 0;
+
+    function onDragStart(y) {
+      dragging  = true;
+      dragStart = y;
+      dragDelta = 0;
+      leafPull.classList.add('grabbing');
+    }
+
+    function onDragMove(y) {
+      if (!dragging) return;
+      dragDelta = Math.max(0, y - dragStart);
+      pullStr.style.height = (32 + dragDelta * 0.55) + 'px';
+      const pct    = Math.min(dragDelta / PULL_THRESHOLD, 1);
+      const peekPx = -(HEADER_H * (1 - pct));
+      header.style.transform  = `translateY(${peekPx}px)`;
+      header.style.transition = 'none';
+    }
+
+    function onDragEnd() {
+      if (!dragging) return;
+      dragging = false;
+      leafPull.classList.remove('grabbing');
+      pullStr.style.height = '32px';
+      header.style.transition = '';
+      if (dragDelta >= PULL_THRESHOLD) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showHeader();
+      } else {
+        header.style.transform = 'translateY(-100%)';
+      }
+    }
+
+    leafPull.addEventListener('mousedown',  e => { onDragStart(e.clientY); e.preventDefault(); });
+    leafPull.addEventListener('touchstart', e => { onDragStart(e.touches[0].clientY); }, { passive: true });
+    window.addEventListener('mousemove',   e => onDragMove(e.clientY));
+    window.addEventListener('touchmove',   e => onDragMove(e.touches[0].clientY), { passive: true });
+    window.addEventListener('mouseup',     onDragEnd);
+    window.addEventListener('touchend',    onDragEnd);
+
+    /* ── 3. Nav zones ── */
+    function scrollTo(sel) {
+      const el = document.querySelector(sel);
+      if (!el) return;
+      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 20, behavior: 'smooth' });
+    }
+
+    document.getElementById('nav-about')  .addEventListener('click', () => scrollTo('#about'));
+    document.getElementById('nav-contact').addEventListener('click', () => scrollTo('#contact'));
+
+    /* ── 4. Physics spring ──
+       Seed positions are fractions of header width/height.
+       Adjust x/y after viewing header scan to match element positions. */
+    const canvas = document.getElementById('physics-canvas');
+    const ctx    = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      canvas.width  = window.innerWidth;
+      canvas.height = HEADER_H;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    const SPRING_K   = 0.16;
+    const DAMPING    = 0.70;
+    const PUSH_FORCE = 14;
+
+    // Seed particles — x/y as fractions of header dimensions
+    // Adjust these after you see the header rendered
+    const seeds = [
+      { x: 0.05, y: 0.55 }, // leaf 1
+      { x: 0.08, y: 0.65 }, // leaf 2
+      { x: 0.03, y: 0.72 }, // leaf 3
+      { x: 0.11, y: 0.78 }, // leaf 4
+      { x: 0.91, y: 0.78 }, // foot 1
+      { x: 0.93, y: 0.86 }, // foot 2
+    ];
+
+    const particles = seeds.map(s => ({
+      wx: s.x * window.innerWidth,
+      wy: s.y * HEADER_H,
+      rx: s.x * window.innerWidth,
+      ry: s.y * HEADER_H,
+      vx: 0, vy: 0,
+    }));
+
+    let mx = -999, my = -999, active = false;
+
+    header.addEventListener('mousemove', e => {
+      const r = header.getBoundingClientRect();
+      mx = e.clientX - r.left;
+      my = e.clientY - r.top;
+      active = true;
+    });
+
+    header.addEventListener('mouseleave', () => {
+      active = false;
+      mx = -999; my = -999;
+    });
+
+    function tick() {
+      requestAnimationFrame(tick);
+      const anyMoving = particles.some(p => Math.abs(p.vx) > 0.08 || Math.abs(p.vy) > 0.08);
+      if (!active && !anyMoving) { ctx.clearRect(0,0,canvas.width,canvas.height); return; }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      particles.forEach(p => {
+        if (active) {
+          const dx = p.wx - mx, dy = p.wy - my;
+          const d  = Math.sqrt(dx*dx + dy*dy);
+          if (d < 70 && d > 0) {
+            const f = (1 - d/70) * PUSH_FORCE;
+            p.vx += (dx/d) * f;
+            p.vy += (dy/d) * f;
+          }
+        }
+        p.vx += (p.rx - p.wx) * SPRING_K;
+        p.vy += (p.ry - p.wy) * SPRING_K;
+        p.vx *= DAMPING;
+        p.vy *= DAMPING;
+        p.wx += p.vx;
+        p.wy += p.vy;
+
+        const disp = Math.sqrt(Math.pow(p.wx-p.rx,2)+Math.pow(p.wy-p.ry,2));
+        if (disp > 0.8) {
+          ctx.save();
+          ctx.strokeStyle = '#1a3a1a';
+          ctx.lineWidth   = 1.2;
+          ctx.globalAlpha = 0.35;
+          ctx.beginPath();
+          ctx.moveTo(p.rx, p.ry);
+          ctx.lineTo(p.wx, p.wy);
+          ctx.stroke();
+          ctx.fillStyle   = '#2a5a2a';
+          ctx.globalAlpha = 0.45;
+          ctx.beginPath();
+          ctx.arc(p.wx, p.wy, 3.5, 0, Math.PI*2);
+          ctx.fill();
+          ctx.restore();
+        }
+      });
+    }
+
+    requestAnimationFrame(tick);
+
+    /* ── Interaction registry ──
+       Console: ELUE.interactions() to see current build state */
+    window.ELUE = {
+      interactions: () => {
+        const list = [
+          { el: 'Header scroll hide/show',          status: 'done' },
+          { el: 'Leaf pull cord drag-to-reveal',     status: 'done' },
+          { el: 'Nav zones — About + Contact',       status: 'done' },
+          { el: 'Physics spring foundation',         status: 'done' },
+          { el: 'Leaves — rustle sound on hover',    status: 'planned' },
+          { el: 'Leaves — fall off on click',        status: 'planned' },
+          { el: 'Feet — spring sway on hover',       status: 'planned' },
+          { el: 'Boat — bob + sink',                 status: 'planned' },
+          { el: 'Water — splash click',              status: 'planned' },
+          { el: 'Sun — toggle light/dark',           status: 'planned' },
+          { el: 'About apartment windows',           status: 'planned' },
+          { el: 'About door knock sequence',         status: 'planned' },
+          { el: 'About bird squawk + eye follow',    status: 'planned' },
+          { el: 'About cat purr/meow/eye follow',    status: 'planned' },
+          { el: 'Contact bad teeth guy voice lines', status: 'planned' },
+          { el: 'Contact feet pop shoes off',        status: 'planned' },
+          { el: 'Contact book page flutter',         status: 'planned' },
+          { el: 'Contact window guys disappear',     status: 'planned' },
+        ];
+        const done    = list.filter(i=>i.status==='done').length;
+        const planned = list.filter(i=>i.status==='planned').length;
+        console.table(list);
+        console.log(`${done} done · ${planned} planned`);
+      }
+    };
+
+  })();
+  </script>
 
 </body>
 </html>
