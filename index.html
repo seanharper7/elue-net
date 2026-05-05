@@ -55,8 +55,8 @@
       filter: contrast(1.08) brightness(1.02);
     }
 
-    /* Transparent nav zones over drawn labels —
-       adjust percentages to match your actual scan */
+    /* Transparent nav zones over drawn labels.
+       Adjust percentages after viewing in browser. */
     .nav-zone {
       position: absolute;
       cursor: pointer;
@@ -81,8 +81,8 @@
       transition: opacity 0.4s ease;
     }
 
-    #leaf-pull.visible    { opacity: 1; pointer-events: all; }
-    #leaf-pull.grabbing   { cursor: grabbing; }
+    #leaf-pull.visible  { opacity: 1; pointer-events: all; }
+    #leaf-pull.grabbing { cursor: grabbing; }
 
     .pull-string {
       width: 1px;
@@ -130,7 +130,7 @@
 
     /* ── Main ── */
     main {
-      max-width: 900px;
+      max-width: 860px;
       margin: 0 auto;
       padding: 4rem 2.5rem 2rem;
     }
@@ -154,7 +154,7 @@
       opacity: 0.3;
     }
 
-    /* Work */
+    /* ── Work ── */
     #work { margin-bottom: 6rem; }
 
     .project {
@@ -219,50 +219,20 @@
     }
 
     .project-link:hover { opacity: 1; color: var(--purple); }
-    .project-soon { font-size: 0.7rem; opacity: 0.22; font-style: italic; }
 
-    /* Drawings */
-    #drawings { margin-bottom: 6rem; }
-
-    .drawings-intro {
-      font-size: 0.87rem;
-      opacity: 0.52;
-      max-width: 48ch;
-      margin-bottom: 2rem;
+    .project-soon {
+      font-size: 0.7rem;
+      opacity: 0.22;
+      font-style: italic;
     }
 
-    .drawings-grid {
-      display: grid;
-      grid-template-columns: repeat(3,1fr);
-      gap: 0.7rem;
-    }
-
-    .drawing-item img {
-      width: 100%;
-      aspect-ratio: 1;
-      object-fit: cover;
-      filter: contrast(1.05);
-      transition: transform 0.4s ease;
-    }
-
-    .drawing-item:hover img { transform: scale(1.03); }
-    .drawing-item.wide { grid-column: span 2; }
-    .drawing-item.wide img { aspect-ratio: 2/1; }
-
-    /* About */
+    /* ── About ── */
     #about { margin-bottom: 6rem; }
-
-    .about-body {
-      display: grid;
-      grid-template-columns: 3fr 2fr;
-      gap: 4rem;
-      align-items: start;
-    }
 
     .about-text p {
       font-size: 0.87rem;
       opacity: 0.62;
-      max-width: 50ch;
+      max-width: 52ch;
       margin-bottom: 1rem;
     }
 
@@ -296,13 +266,7 @@
       white-space: nowrap;
     }
 
-    .about-image img {
-      width: 100%;
-      transform: rotate(-1.5deg);
-      filter: contrast(1.05);
-    }
-
-    /* Contact */
+    /* ── Contact ── */
     #contact {
       background: var(--ink);
       color: var(--paper);
@@ -315,7 +279,7 @@
     }
 
     .contact-heading {
-      font-size: clamp(2.5rem,6vw,5rem);
+      font-size: clamp(2.5rem, 6vw, 5rem);
       font-weight: 700;
       font-style: italic;
       line-height: 1.0;
@@ -360,43 +324,49 @@
       justify-content: space-between;
     }
 
-    /* Responsive */
+    /* ── Responsive ── */
     @media (max-width: 700px) {
       main { padding: 3rem 1.5rem 2rem; }
-      .drawings-grid { grid-template-columns: repeat(2,1fr); }
-      .about-body { grid-template-columns: 1fr; }
-      .about-image { order: -1; }
-      #contact { grid-template-columns: 1fr; margin: 0 -1.5rem; padding: 4rem 1.5rem; }
+      #contact {
+        grid-template-columns: 1fr;
+        margin: 0 -1.5rem;
+        padding: 4rem 1.5rem;
+      }
       .social-links { align-items: flex-start; }
     }
   </style>
 </head>
 <body>
 
+  <!-- ── Header drawing ── -->
   <header id="site-header">
     <img
       src="assets/header.jpg"
-      alt="Elue hand-drawn header — ink drawing with creatures, About and Contact labels, leaves, and a figure with dangling feet"
+      alt="Elue — hand drawn header with About and Contact navigation"
     >
     <div class="nav-zone" id="nav-about"   title="About"></div>
     <div class="nav-zone" id="nav-contact" title="Contact"></div>
   </header>
 
+  <!-- Physics canvas overlay -->
   <canvas id="physics-canvas"></canvas>
 
+  <!-- Leaf pull cord — appears when header is hidden -->
   <div id="leaf-pull" aria-label="Pull to reveal header">
     <div class="pull-string" id="pull-string"></div>
-    <!-- SVG placeholder leaf — replace with your own drawn and scanned leaf -->
+    <!-- SVG placeholder — replace with your own drawn leaf scan -->
     <svg class="pull-leaf" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M24 3 C9 9,3 27,12 38 C17 44,24 46,24 46 C24 46,31 44,36 38 C45 27,39 9,24 3Z"
             fill="none" stroke="#0D0B08" stroke-width="1.5" stroke-linecap="round"/>
-      <line x1="24" y1="3" x2="24" y2="46" stroke="#0D0B08" stroke-width="0.9" stroke-linecap="round" opacity="0.35"/>
+      <line x1="24" y1="3" x2="24" y2="46" stroke="#0D0B08" stroke-width="0.9"
+            stroke-linecap="round" opacity="0.35"/>
       <path d="M24 14 L17 20 M24 22 L31 27 M24 32 L16 36"
             stroke="#0D0B08" stroke-width="0.7" stroke-linecap="round" opacity="0.35"/>
     </svg>
     <span class="pull-hint">pull to open</span>
   </div>
 
+  <!-- ── Page content ── -->
   <main>
 
     <section id="work">
@@ -454,73 +424,52 @@
 
     </section>
 
-    <section id="drawings">
-      <p class="section-label">Drawings</p>
-      <p class="drawings-intro">
-        Ink on paper. Made during and between sessions.
-        Not separate from the music.
-      </p>
-      <div class="drawings-grid">
-        <div class="drawing-item wide">
-          <img src="assets/city.jpg" alt="Dense ink cityscape — my dog smells bad, watch your step">
-        </div>
-        <div class="drawing-item">
-          <img src="assets/please-fill.jpg" alt="Please fill the canvas!!!">
-        </div>
-        <div class="drawing-item">
-          <img src="assets/night.jpg" alt="Black ink night scene">
-        </div>
-        <div class="drawing-item">
-          <img src="assets/skull.jpg" alt="Geometric skull and leaves">
-        </div>
-        <div class="drawing-item wide">
-          <img src="assets/jazz.jpg" alt="Fuck ya baby!! I love JAZZ!">
-        </div>
-        <div class="drawing-item">
-          <img src="assets/wolf.jpg" alt="New distraction please and thank you">
-        </div>
-        <div class="drawing-item">
-          <img src="assets/comics.jpg" alt="I already miss it. This is a perfect moment.">
-        </div>
-        <div class="drawing-item">
-          <img src="assets/dense1.jpg" alt="Dense organic ink drawing">
-        </div>
-      </div>
-    </section>
-
     <section id="about">
       <p class="section-label">About</p>
-      <div class="about-body">
-        <div class="about-text">
-          <p>
-            I'm Elue — a sound designer and composer based in Edmonton, Alberta.
-            I work primarily with animators and filmmakers who want something
-            that doesn't sound like it came from a library.
-          </p>
-          <p>
-            My background is in production, jazz piano, and making electronic
-            music in bedroom studios since I was twelve.
-            MacEwan University music program, graduated 2025.
-            I work in Ableton. I make noise.
-          </p>
-          <p>
-            The drawings and the audio come from the same place —
-            raw, intricate, a little weird. I think that's good.
-          </p>
-          <div class="credits-block">
-            <h3>Credits</h3>
-            <ul class="credit-list">
-              <li>Snooze Quest — Victoria Vincent / Adult Swim <span class="credit-role">Score · Sound design</span></li>
-              <li>Praise God, The Mouse Is Dead! — Trevor Mac  <span class="credit-role">Score · Sound design</span></li>
-              <li>Dream Journal — Rachel Walton                <span class="credit-role">Production · Recording</span></li>
-              <li>Long Sword — Malcolm Guglich                 <span class="credit-role">Production · Piano</span></li>
-              <li>GIRAF21 Indie Mixtape — Quickdraw             <span class="credit-role">Scoring</span></li>
-              <li>Portrait of The Issue — Naima                <span class="credit-role">Co-writing · Production · Piano</span></li>
-            </ul>
-          </div>
-        </div>
-        <div class="about-image">
-          <img src="assets/dense2.jpg" alt="Dense organic ink drawing — leaves, eyes, architecture">
+      <div class="about-text">
+        <p>
+          I'm Elue — a sound designer and composer based in Edmonton, Alberta.
+          I work primarily with animators and filmmakers who want something
+          that doesn't sound like it came from a library.
+        </p>
+        <p>
+          My background is in production, jazz piano, and making electronic
+          music in bedroom studios since I was twelve.
+          MacEwan University music program, graduated 2025.
+          I work in Ableton. I make noise.
+        </p>
+        <p>
+          The drawings and the audio come from the same place —
+          raw, intricate, a little weird. I think that's good.
+        </p>
+        <div class="credits-block">
+          <h3>Credits</h3>
+          <ul class="credit-list">
+            <li>
+              Snooze Quest — Victoria Vincent / Adult Swim
+              <span class="credit-role">Score · Sound design</span>
+            </li>
+            <li>
+              Praise God, The Mouse Is Dead! — Trevor Mac
+              <span class="credit-role">Score · Sound design</span>
+            </li>
+            <li>
+              Dream Journal — Rachel Walton
+              <span class="credit-role">Production · Recording</span>
+            </li>
+            <li>
+              Long Sword — Malcolm Guglich
+              <span class="credit-role">Production · Piano</span>
+            </li>
+            <li>
+              GIRAF21 Indie Mixtape — Quickdraw Animation
+              <span class="credit-role">Scoring</span>
+            </li>
+            <li>
+              Portrait of The Issue — Naima
+              <span class="credit-role">Co-writing · Production · Piano</span>
+            </li>
+          </ul>
         </div>
       </div>
     </section>
@@ -528,13 +477,15 @@
     <section id="contact">
       <div class="contact-left">
         <h2 class="contact-heading">Let's<br>make<br>something.</h2>
-        <a class="contact-email" href="mailto:elueelephant@gmail.com">elueelephant@gmail.com</a>
+        <a class="contact-email" href="mailto:elueelephant@gmail.com">
+          elueelephant@gmail.com
+        </a>
       </div>
       <div class="contact-right">
         <div class="social-links">
-          <a class="social-link" href="https://bandcamp.com"   target="_blank" rel="noopener">Bandcamp</a>
-          <a class="social-link" href="https://youtube.com"    target="_blank" rel="noopener">YouTube</a>
-          <a class="social-link" href="https://instagram.com"  target="_blank" rel="noopener">Instagram</a>
+          <a class="social-link" href="https://bandcamp.com"  target="_blank" rel="noopener">Bandcamp</a>
+          <a class="social-link" href="https://youtube.com"   target="_blank" rel="noopener">YouTube</a>
+          <a class="social-link" href="https://instagram.com" target="_blank" rel="noopener">Instagram</a>
         </div>
       </div>
       <div class="footer-bar">
@@ -554,9 +505,8 @@
     const HEADER_H = 280;
     const PULL_THRESHOLD = 80;
 
-    /* ── 1. Scroll hide/show ── */
-    let lastScroll = 0;
-    let isHidden   = false;
+    /* ── Scroll hide/show ── */
+    let lastScroll = 0, isHidden = false;
 
     function hideHeader() {
       if (isHidden) return;
@@ -583,13 +533,11 @@
       lastScroll = s;
     }, { passive: true });
 
-    /* ── 2. Leaf pull cord ── */
+    /* ── Leaf pull cord ── */
     let dragging = false, dragStart = 0, dragDelta = 0;
 
     function onDragStart(y) {
-      dragging  = true;
-      dragStart = y;
-      dragDelta = 0;
+      dragging = true; dragStart = y; dragDelta = 0;
       leafPull.classList.add('grabbing');
     }
 
@@ -597,9 +545,8 @@
       if (!dragging) return;
       dragDelta = Math.max(0, y - dragStart);
       pullStr.style.height = (32 + dragDelta * 0.55) + 'px';
-      const pct    = Math.min(dragDelta / PULL_THRESHOLD, 1);
-      const peekPx = -(HEADER_H * (1 - pct));
-      header.style.transform  = `translateY(${peekPx}px)`;
+      const pct = Math.min(dragDelta / PULL_THRESHOLD, 1);
+      header.style.transform  = `translateY(${-(HEADER_H * (1 - pct))}px)`;
       header.style.transition = 'none';
     }
 
@@ -624,7 +571,7 @@
     window.addEventListener('mouseup',     onDragEnd);
     window.addEventListener('touchend',    onDragEnd);
 
-    /* ── 3. Nav zones ── */
+    /* ── Nav zones ── */
     function scrollTo(sel) {
       const el = document.querySelector(sel);
       if (!el) return;
@@ -634,39 +581,29 @@
     document.getElementById('nav-about')  .addEventListener('click', () => scrollTo('#about'));
     document.getElementById('nav-contact').addEventListener('click', () => scrollTo('#contact'));
 
-    /* ── 4. Physics spring ──
+    /* ── Physics spring foundation ──
        Seed positions are fractions of header width/height.
-       Adjust x/y after viewing header scan to match element positions. */
+       Adjust x/y values after viewing header in browser
+       to match where the leaves and feet actually sit. */
     const canvas = document.getElementById('physics-canvas');
     const ctx    = canvas.getContext('2d');
 
-    function resizeCanvas() {
-      canvas.width  = window.innerWidth;
-      canvas.height = HEADER_H;
-    }
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    function resize() { canvas.width = window.innerWidth; canvas.height = HEADER_H; }
+    resize();
+    window.addEventListener('resize', resize);
 
-    const SPRING_K   = 0.16;
-    const DAMPING    = 0.70;
-    const PUSH_FORCE = 14;
+    const SPRING_K = 0.16, DAMPING = 0.70, PUSH = 14;
 
-    // Seed particles — x/y as fractions of header dimensions
-    // Adjust these after you see the header rendered
-    const seeds = [
-      { x: 0.05, y: 0.55 }, // leaf 1
+    const particles = [
+      { x: 0.05, y: 0.55 }, // leaf 1 — adjust to match your drawing
       { x: 0.08, y: 0.65 }, // leaf 2
       { x: 0.03, y: 0.72 }, // leaf 3
       { x: 0.11, y: 0.78 }, // leaf 4
       { x: 0.91, y: 0.78 }, // foot 1
       { x: 0.93, y: 0.86 }, // foot 2
-    ];
-
-    const particles = seeds.map(s => ({
-      wx: s.x * window.innerWidth,
-      wy: s.y * HEADER_H,
-      rx: s.x * window.innerWidth,
-      ry: s.y * HEADER_H,
+    ].map(p => ({
+      wx: p.x * window.innerWidth, wy: p.y * HEADER_H,
+      rx: p.x * window.innerWidth, ry: p.y * HEADER_H,
       vx: 0, vy: 0,
     }));
 
@@ -674,92 +611,36 @@
 
     header.addEventListener('mousemove', e => {
       const r = header.getBoundingClientRect();
-      mx = e.clientX - r.left;
-      my = e.clientY - r.top;
+      mx = e.clientX - r.left; my = e.clientY - r.top;
       active = true;
     });
-
-    header.addEventListener('mouseleave', () => {
-      active = false;
-      mx = -999; my = -999;
-    });
+    header.addEventListener('mouseleave', () => { active = false; mx = -999; my = -999; });
 
     function tick() {
       requestAnimationFrame(tick);
-      const anyMoving = particles.some(p => Math.abs(p.vx) > 0.08 || Math.abs(p.vy) > 0.08);
-      if (!active && !anyMoving) { ctx.clearRect(0,0,canvas.width,canvas.height); return; }
-
+      const moving = particles.some(p => Math.abs(p.vx) > 0.08 || Math.abs(p.vy) > 0.08);
+      if (!active && !moving) { ctx.clearRect(0,0,canvas.width,canvas.height); return; }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       particles.forEach(p => {
         if (active) {
-          const dx = p.wx - mx, dy = p.wy - my;
-          const d  = Math.sqrt(dx*dx + dy*dy);
-          if (d < 70 && d > 0) {
-            const f = (1 - d/70) * PUSH_FORCE;
-            p.vx += (dx/d) * f;
-            p.vy += (dy/d) * f;
-          }
+          const dx = p.wx-mx, dy = p.wy-my, d = Math.sqrt(dx*dx+dy*dy);
+          if (d < 70 && d > 0) { const f=(1-d/70)*PUSH; p.vx+=(dx/d)*f; p.vy+=(dy/d)*f; }
         }
-        p.vx += (p.rx - p.wx) * SPRING_K;
-        p.vy += (p.ry - p.wy) * SPRING_K;
-        p.vx *= DAMPING;
-        p.vy *= DAMPING;
-        p.wx += p.vx;
-        p.wy += p.vy;
-
-        const disp = Math.sqrt(Math.pow(p.wx-p.rx,2)+Math.pow(p.wy-p.ry,2));
+        p.vx += (p.rx-p.wx)*SPRING_K; p.vy += (p.ry-p.wy)*SPRING_K;
+        p.vx *= DAMPING; p.vy *= DAMPING;
+        p.wx += p.vx; p.wy += p.vy;
+        const disp = Math.hypot(p.wx-p.rx, p.wy-p.ry);
         if (disp > 0.8) {
           ctx.save();
-          ctx.strokeStyle = '#1a3a1a';
-          ctx.lineWidth   = 1.2;
-          ctx.globalAlpha = 0.35;
-          ctx.beginPath();
-          ctx.moveTo(p.rx, p.ry);
-          ctx.lineTo(p.wx, p.wy);
-          ctx.stroke();
-          ctx.fillStyle   = '#2a5a2a';
-          ctx.globalAlpha = 0.45;
-          ctx.beginPath();
-          ctx.arc(p.wx, p.wy, 3.5, 0, Math.PI*2);
-          ctx.fill();
+          ctx.strokeStyle = '#1a3a1a'; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.35;
+          ctx.beginPath(); ctx.moveTo(p.rx,p.ry); ctx.lineTo(p.wx,p.wy); ctx.stroke();
+          ctx.fillStyle = '#2a5a2a'; ctx.globalAlpha = 0.45;
+          ctx.beginPath(); ctx.arc(p.wx,p.wy,3.5,0,Math.PI*2); ctx.fill();
           ctx.restore();
         }
       });
     }
-
     requestAnimationFrame(tick);
-
-    /* ── Interaction registry ──
-       Console: ELUE.interactions() to see current build state */
-    window.ELUE = {
-      interactions: () => {
-        const list = [
-          { el: 'Header scroll hide/show',          status: 'done' },
-          { el: 'Leaf pull cord drag-to-reveal',     status: 'done' },
-          { el: 'Nav zones — About + Contact',       status: 'done' },
-          { el: 'Physics spring foundation',         status: 'done' },
-          { el: 'Leaves — rustle sound on hover',    status: 'planned' },
-          { el: 'Leaves — fall off on click',        status: 'planned' },
-          { el: 'Feet — spring sway on hover',       status: 'planned' },
-          { el: 'Boat — bob + sink',                 status: 'planned' },
-          { el: 'Water — splash click',              status: 'planned' },
-          { el: 'Sun — toggle light/dark',           status: 'planned' },
-          { el: 'About apartment windows',           status: 'planned' },
-          { el: 'About door knock sequence',         status: 'planned' },
-          { el: 'About bird squawk + eye follow',    status: 'planned' },
-          { el: 'About cat purr/meow/eye follow',    status: 'planned' },
-          { el: 'Contact bad teeth guy voice lines', status: 'planned' },
-          { el: 'Contact feet pop shoes off',        status: 'planned' },
-          { el: 'Contact book page flutter',         status: 'planned' },
-          { el: 'Contact window guys disappear',     status: 'planned' },
-        ];
-        const done    = list.filter(i=>i.status==='done').length;
-        const planned = list.filter(i=>i.status==='planned').length;
-        console.table(list);
-        console.log(`${done} done · ${planned} planned`);
-      }
-    };
 
   })();
   </script>
