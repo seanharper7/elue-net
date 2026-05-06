@@ -8,11 +8,18 @@
   <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
 
   <style>
+    /* ─────────────────────────────────────────
+       VARIABLES
+       Canvas is 3161 × 1124px.
+       Header height is always exactly that ratio.
+    ───────────────────────────────────────── */
     :root {
-      --paper:    #F0EBE0;
-      --ink:      #0D0B08;
-      --purple:   #7C5CBF;
-      --header-h: 280px;
+      --paper:  #F0EBE0;
+      --ink:    #0D0B08;
+      --purple: #7C5CBF;
+
+      /* Header height derived from canvas aspect ratio */
+      --header-h: calc(100vw * (1124 / 3161));
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,40 +41,173 @@
     a { color: inherit; text-decoration: none; }
     img { display: block; max-width: 100%; }
 
-    /* ── Header ── */
+
+    /* ─────────────────────────────────────────
+       HEADER — layered PNG system
+       B29 Background.png is the base.
+       All other elements sit on top, absolutely positioned
+       as percentages of the container.
+
+       TUNING POSITIONS:
+       Open in browser, right-click any element → Inspect,
+       adjust left/top/width until it overlaps the background correctly.
+       Update the CSS variable for that element here.
+    ───────────────────────────────────────── */
     #site-header {
       position: fixed;
       top: 0; left: 0; right: 0;
       z-index: 200;
       height: var(--header-h);
-      overflow: hidden;
+      /* No overflow hidden — elements can spill slightly if needed */
       transform: translateY(0);
       transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
     }
 
     #site-header.hidden { transform: translateY(-100%); }
 
-    #site-header img {
+    /* Every layer shares this base */
+    .layer {
+      position: absolute;
+      /* default — override per element */
+      left: 0; top: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none; /* individual elements re-enable as needed */
+    }
+
+    /* Background — full bleed base layer */
+    #bg {
       width: 100%;
       height: 100%;
       object-fit: cover;
       object-position: center top;
-      filter: contrast(1.08) brightness(1.02);
+      display: block;
+      position: absolute;
+      top: 0; left: 0;
+      filter: contrast(1.05);
     }
 
-    /* Transparent nav zones over drawn labels.
-       Adjust percentages after viewing in browser. */
-    .nav-zone {
+    /* ── Element positioning ──
+       Format: left / top / width (all as % of header container)
+       Height is auto to preserve PNG aspect ratio unless specified.
+
+       ⚠ ALL VALUES ARE PLACEHOLDERS — tune in browser. ⚠ */
+
+    /* B1 — Leafs (left side cluster) */
+    #b1-leafs      { left: 1%;  top: 30%; width: 12%; }
+
+    /* B2 — Boat */
+    #b2-boat       { left: 15%; top: 55%; width: 10%; }
+
+    /* B3 — Water */
+    #b3-water      { left: 10%; top: 65%; width: 25%; }
+
+    /* B4 — Sun */
+    #b4-sun        { left: 5%;  top: 5%;  width: 8%; }
+
+    /* B5 — Garbage pile */
+    #b5-garbage    { left: 20%; top: 60%; width: 8%; }
+
+    /* B6 — White bubbles in garbage */
+    #b6-bubbles    { left: 21%; top: 58%; width: 6%; }
+
+    /* B7 — About label */
+    #b7-about      { left: 17%; top: 45%; width: 10%; cursor: pointer; pointer-events: all; }
+
+    /* B8 — Apartment windows */
+    #b8-windows    { left: 30%; top: 20%; width: 15%; }
+
+    /* B9 — Apartment door */
+    #b9-door       { left: 32%; top: 45%; width: 5%; cursor: pointer; pointer-events: all; }
+
+    /* B10 — Egg things (top) */
+    #b10-eggs      { left: 38%; top: 2%;  width: 12%; }
+
+    /* B11 — Bird (center, near Elue) */
+    #b11-bird      { left: 40%; top: 25%; width: 10%; }
+
+    /* B12 — Eyes */
+    #b12-eyes      { left: 42%; top: 35%; width: 14%; }
+
+    /* B13 — Elue text */
+    #b13-elue      { left: 36%; top: 38%; width: 22%; }
+
+    /* B14 — Background birds (near Elue) */
+    #b14-birds     { left: 30%; top: 8%;  width: 18%; }
+
+    /* B15 — Pull-down leaf (the draw cord) */
+    #b15-pullleaf  { left: 48%; top: 0%;  width: 4%; cursor: grab; pointer-events: all; }
+    #b15-pullleaf.grabbing { cursor: grabbing; }
+
+    /* B16 — Metal pipe */
+    #b16-pipe      { left: 60%; top: 30%; width: 4%; }
+
+    /* B17 — Bird (right of center) */
+    #b17-bird2     { left: 62%; top: 15%; width: 8%; }
+
+    /* B18 — Cat */
+    #b18-cat       { left: 65%; top: 40%; width: 8%; cursor: pointer; pointer-events: all; }
+
+    /* B19 — Sidewalk */
+    #b19-sidewalk  { left: 55%; top: 70%; width: 30%; }
+
+    /* B20 — Contact label */
+    #b20-contact   { left: 58%; top: 45%; width: 11%; cursor: pointer; pointer-events: all; }
+
+    /* B21 — Guy with hair */
+    #b21-guy       { left: 70%; top: 30%; width: 8%; cursor: pointer; pointer-events: all; }
+
+    /* B22 — Apartment (right side) */
+    #b22-apartment { left: 72%; top: 5%;  width: 16%; }
+
+    /* B23 — Big book */
+    #b23-book      { left: 75%; top: 50%; width: 12%; }
+
+    /* B24 — Window with guys */
+    #b24-window    { left: 80%; top: 35%; width: 10%; cursor: pointer; pointer-events: all; }
+
+    /* B25 — Bad teeth guy */
+    #b25-badteeth  { left: 86%; top: 45%; width: 8%; }
+
+    /* B26 — Bad teeth guy feet */
+    #b26-feet      { left: 87%; top: 65%; width: 6%; cursor: pointer; pointer-events: all; }
+
+    /* B26.1 — Feet dangling (separated moving part) */
+    #b261-dangle   { left: 87%; top: 70%; width: 5%; }
+
+    /* B27 — Door (far right) */
+    #b27-door2     { left: 93%; top: 40%; width: 5%; cursor: pointer; pointer-events: all; }
+
+    /* B28 — Eyeball above Elue */
+    #b28-eyeball   { left: 44%; top: 18%; width: 6%; }
+
+    /* ── Positioned img helper ──
+       All layered elements use this to sit correctly */
+    .scene-el {
       position: absolute;
+      height: auto;
+      pointer-events: none; /* re-enabled per element above */
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    /* Clickable / interactive elements get a subtle cursor signal */
+    .scene-el.interactive {
+      pointer-events: all;
       cursor: pointer;
     }
-    #nav-about   { bottom: 30%; left: 17%; width: 11%; height: 18%; }
-    #nav-contact { bottom: 30%; left: 57%; width: 13%; height: 18%; }
 
-    /* ── Leaf pull cord ── */
+
+    /* ─────────────────────────────────────────
+       LEAF PULL CORD
+       Appears when header is hidden.
+       B15 Pull down leaf.png IS the cord visual —
+       no separate SVG needed once that PNG is in place.
+    ───────────────────────────────────────── */
     #leaf-pull {
       position: fixed;
       top: 0;
+      /* Matches B15 left position — update both if you move the leaf */
       left: 50%;
       transform: translateX(-50%);
       z-index: 300;
@@ -88,47 +228,41 @@
       width: 1px;
       height: 32px;
       background: var(--ink);
-      opacity: 0.35;
+      opacity: 0.4;
     }
 
-    .pull-leaf {
+    /* Uses B15 PNG once available; SVG fallback until then */
+    #pull-leaf-img {
       width: 48px;
-      height: 48px;
+      height: auto;
       animation: sway 3s ease-in-out infinite;
       transform-origin: 50% 0%;
     }
 
     @keyframes sway {
-      0%,100% { transform: rotate(-6deg); }
-      50%      { transform: rotate(6deg); }
+      0%,100% { transform: rotate(-7deg); }
+      50%      { transform: rotate(7deg); }
     }
 
     .pull-hint {
       font-size: 0.58rem;
       letter-spacing: 0.15em;
       text-transform: uppercase;
-      opacity: 0.25;
-      margin-top: 4px;
+      opacity: 0.22;
+      margin-top: 5px;
       white-space: nowrap;
-      animation: pulse 4s ease-in-out infinite;
+      animation: fadepulse 4s ease-in-out infinite;
     }
 
-    @keyframes pulse {
-      0%,100% { opacity: 0.12; }
-      50%      { opacity: 0.35; }
+    @keyframes fadepulse {
+      0%,100% { opacity: 0.1; }
+      50%      { opacity: 0.3; }
     }
 
-    /* ── Physics canvas ── */
-    #physics-canvas {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%;
-      height: var(--header-h);
-      z-index: 210;
-      pointer-events: none;
-    }
 
-    /* ── Main ── */
+    /* ─────────────────────────────────────────
+       MAIN CONTENT
+    ───────────────────────────────────────── */
     main {
       max-width: 860px;
       margin: 0 auto;
@@ -161,7 +295,6 @@
       padding: 2.5rem 0;
       border-top: 1px solid rgba(13,11,8,0.1);
     }
-
     .project:last-child { border-bottom: 1px solid rgba(13,11,8,0.1); }
 
     .project-number {
@@ -217,14 +350,9 @@
       opacity: 0.48;
       transition: opacity 0.2s, color 0.2s;
     }
-
     .project-link:hover { opacity: 1; color: var(--purple); }
 
-    .project-soon {
-      font-size: 0.7rem;
-      opacity: 0.22;
-      font-style: italic;
-    }
+    .project-soon { font-size: 0.7rem; opacity: 0.22; font-style: italic; }
 
     /* ── About ── */
     #about { margin-bottom: 6rem; }
@@ -279,7 +407,7 @@
     }
 
     .contact-heading {
-      font-size: clamp(2.5rem, 6vw, 5rem);
+      font-size: clamp(2.5rem,6vw,5rem);
       font-weight: 700;
       font-style: italic;
       line-height: 1.0;
@@ -292,7 +420,6 @@
       padding-bottom: 2px;
       transition: color 0.2s;
     }
-
     .contact-email:hover { color: #A68AD0; }
 
     .social-links {
@@ -309,7 +436,6 @@
       opacity: 0.38;
       transition: opacity 0.2s, color 0.2s;
     }
-
     .social-link:hover { opacity: 1; color: #A68AD0; }
 
     .footer-bar {
@@ -324,7 +450,6 @@
       justify-content: space-between;
     }
 
-    /* ── Responsive ── */
     @media (max-width: 700px) {
       main { padding: 3rem 1.5rem 2rem; }
       #contact {
@@ -338,35 +463,123 @@
 </head>
 <body>
 
-  <!-- ── Header drawing ── -->
+  <!-- ─────────────────────────────────────────
+       HEADER — layered scene
+       Add each PNG as it's exported from Krita.
+       Tune position in CSS above (left/top/width).
+  ───────────────────────────────────────── -->
   <header id="site-header">
-    <img
-      src="assets/header.jpg"
-      alt="Elue — hand drawn header with About and Contact navigation"
-    >
-    <div class="nav-zone" id="nav-about"   title="About"></div>
-    <div class="nav-zone" id="nav-contact" title="Contact"></div>
+
+    <!-- B29 — Background (base layer, always first) -->
+    <img id="bg" src="assets/B29 Background.png"
+         alt="Elue hand-drawn scene — creatures, city, apartment buildings">
+
+    <!-- B1 — Leafs -->
+    <img id="b1-leafs"     class="scene-el" src="assets/B1 Leafs.png"      alt="">
+
+    <!-- B2 — Boat -->
+    <img id="b2-boat"      class="scene-el" src="assets/B2 Boat.png"       alt="">
+
+    <!-- B3 — Water -->
+    <img id="b3-water"     class="scene-el" src="assets/B3 Water.png"      alt="">
+
+    <!-- B4 — Sun -->
+    <img id="b4-sun"       class="scene-el" src="assets/B4 Sun.png"        alt="">
+
+    <!-- B5 — Garbage pile -->
+    <img id="b5-garbage"   class="scene-el" src="assets/B5 Garbage pile.png" alt="">
+
+    <!-- B6 — White bubbles in garbage -->
+    <img id="b6-bubbles"   class="scene-el" src="assets/B6 White bubbles in garbage.png" alt="">
+
+    <!-- B7 — About label (clickable nav) -->
+    <img id="b7-about"     class="scene-el interactive" src="assets/B7 About.png" alt="About">
+
+    <!-- B8 — Apartment windows -->
+    <img id="b8-windows"   class="scene-el" src="assets/B8 Apartment windows.png" alt="">
+
+    <!-- B9 — Apartment door -->
+    <img id="b9-door"      class="scene-el interactive" src="assets/B9 Apartment door.png" alt="">
+
+    <!-- B10 — Egg things -->
+    <img id="b10-eggs"     class="scene-el" src="assets/B10 Up top egg things.png" alt="">
+
+    <!-- B11 — Bird center -->
+    <img id="b11-bird"     class="scene-el" src="assets/B11 Bird.png"      alt="">
+
+    <!-- B12 — Eyes -->
+    <img id="b12-eyes"     class="scene-el" src="assets/B12 Eyes.png"      alt="">
+
+    <!-- B13 — Elue text -->
+    <img id="b13-elue"     class="scene-el" src="assets/B13 Elue.png"      alt="Elue">
+
+    <!-- B14 — Background birds -->
+    <img id="b14-birds"    class="scene-el" src="assets/B14 Elue background birds.png" alt="">
+
+    <!-- B15 — Pull-down leaf (also used as pull cord — see JS) -->
+    <img id="b15-pullleaf" class="scene-el interactive" src="assets/B15 Pull down leaf.png" alt="">
+
+    <!-- B16 — Metal pipe -->
+    <img id="b16-pipe"     class="scene-el" src="assets/B16 Metal pipe.png" alt="">
+
+    <!-- B17 — Bird right -->
+    <img id="b17-bird2"    class="scene-el" src="assets/B17 Bird.png"      alt="">
+
+    <!-- B18 — Cat -->
+    <img id="b18-cat"      class="scene-el interactive" src="assets/B18 Cat.png" alt="">
+
+    <!-- B19 — Sidewalk -->
+    <img id="b19-sidewalk" class="scene-el" src="assets/B19 Sidewalk.png"  alt="">
+
+    <!-- B20 — Contact label (clickable nav) -->
+    <img id="b20-contact"  class="scene-el interactive" src="assets/B20 Contact.png" alt="Contact">
+
+    <!-- B21 — Guy with hair -->
+    <img id="b21-guy"      class="scene-el interactive" src="assets/B21 Guy with hair.png" alt="">
+
+    <!-- B22 — Apartment right -->
+    <img id="b22-apartment" class="scene-el" src="assets/B22 Apartment.png" alt="">
+
+    <!-- B23 — Big book -->
+    <img id="b23-book"     class="scene-el" src="assets/B23 Big book.png"  alt="">
+
+    <!-- B24 — Window with guys -->
+    <img id="b24-window"   class="scene-el interactive" src="assets/B24 Window.png" alt="">
+
+    <!-- B25 — Bad teeth guy -->
+    <img id="b25-badteeth" class="scene-el" src="assets/B25 Bad teeth guy.png" alt="">
+
+    <!-- B26 — Bad teeth guy feet (base) -->
+    <img id="b26-feet"     class="scene-el interactive" src="assets/B26 Bad teeth guy feet.png" alt="">
+
+    <!-- B26.1 — Feet dangling (separated moving part) -->
+    <img id="b261-dangle"  class="scene-el" src="assets/B26.1 Bad teeth guy feet dangling.png" alt="">
+
+    <!-- B27 — Door far right -->
+    <img id="b27-door2"    class="scene-el interactive" src="assets/B27 Door.png" alt="">
+
+    <!-- B28 — Eyeball above Elue -->
+    <img id="b28-eyeball"  class="scene-el" src="assets/B28 Eyeball above Elue.png" alt="">
+
   </header>
 
-  <!-- Physics canvas overlay -->
-  <canvas id="physics-canvas"></canvas>
 
-  <!-- Leaf pull cord — appears when header is hidden -->
+  <!-- ─────────────────────────────────────────
+       LEAF PULL CORD
+       Hangs at top when header is hidden.
+       Uses B15 PNG as the visual leaf.
+  ───────────────────────────────────────── -->
   <div id="leaf-pull" aria-label="Pull to reveal header">
     <div class="pull-string" id="pull-string"></div>
-    <!-- SVG placeholder — replace with your own drawn leaf scan -->
-    <svg class="pull-leaf" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M24 3 C9 9,3 27,12 38 C17 44,24 46,24 46 C24 46,31 44,36 38 C45 27,39 9,24 3Z"
-            fill="none" stroke="#0D0B08" stroke-width="1.5" stroke-linecap="round"/>
-      <line x1="24" y1="3" x2="24" y2="46" stroke="#0D0B08" stroke-width="0.9"
-            stroke-linecap="round" opacity="0.35"/>
-      <path d="M24 14 L17 20 M24 22 L31 27 M24 32 L16 36"
-            stroke="#0D0B08" stroke-width="0.7" stroke-linecap="round" opacity="0.35"/>
-    </svg>
+    <!-- B15 PNG used here too — same leaf, consistent visual -->
+    <img id="pull-leaf-img" src="assets/B15 Pull down leaf.png" alt="">
     <span class="pull-hint">pull to open</span>
   </div>
 
-  <!-- ── Page content ── -->
+
+  <!-- ─────────────────────────────────────────
+       PAGE CONTENT
+  ───────────────────────────────────────── -->
   <main>
 
     <section id="work">
@@ -445,30 +658,18 @@
         <div class="credits-block">
           <h3>Credits</h3>
           <ul class="credit-list">
-            <li>
-              Snooze Quest — Victoria Vincent / Adult Swim
-              <span class="credit-role">Score · Sound design</span>
-            </li>
-            <li>
-              Praise God, The Mouse Is Dead! — Trevor Mac
-              <span class="credit-role">Score · Sound design</span>
-            </li>
-            <li>
-              Dream Journal — Rachel Walton
-              <span class="credit-role">Production · Recording</span>
-            </li>
-            <li>
-              Long Sword — Malcolm Guglich
-              <span class="credit-role">Production · Piano</span>
-            </li>
-            <li>
-              GIRAF21 Indie Mixtape — Quickdraw Animation
-              <span class="credit-role">Scoring</span>
-            </li>
-            <li>
-              Portrait of The Issue — Naima
-              <span class="credit-role">Co-writing · Production · Piano</span>
-            </li>
+            <li>Snooze Quest — Victoria Vincent / Adult Swim
+              <span class="credit-role">Score · Sound design</span></li>
+            <li>Praise God, The Mouse Is Dead! — Trevor Mac
+              <span class="credit-role">Score · Sound design</span></li>
+            <li>Dream Journal — Rachel Walton
+              <span class="credit-role">Production · Recording</span></li>
+            <li>Long Sword — Malcolm Guglich
+              <span class="credit-role">Production · Piano</span></li>
+            <li>GIRAF21 Indie Mixtape — Quickdraw Animation
+              <span class="credit-role">Scoring</span></li>
+            <li>Portrait of The Issue — Naima
+              <span class="credit-role">Co-writing · Production · Piano</span></li>
           </ul>
         </div>
       </div>
@@ -496,16 +697,69 @@
 
   </main>
 
+
+  <!-- ─────────────────────────────────────────
+       JAVASCRIPT
+       Interactions are grouped by element.
+       Each section is clearly labelled with its B# ref.
+       Add sound by dropping .mp3/.ogg files in assets/sounds/
+       and un-commenting the Audio lines.
+  ───────────────────────────────────────── */
   <script>
   (function() {
-    const header   = document.getElementById('site-header');
-    const leafPull = document.getElementById('leaf-pull');
-    const pullStr  = document.getElementById('pull-string');
+
+    /* ── Utility ── */
+    const el  = id => document.getElementById(id);
+    const qs  = s  => document.querySelector(s);
+
+    const header   = el('site-header');
+    const leafPull = el('leaf-pull');
+    const pullStr  = el('pull-string');
     const body     = document.body;
-    const HEADER_H = 280;
+
+    const HEADER_H      = header.offsetHeight;
     const PULL_THRESHOLD = 80;
 
-    /* ── Scroll hide/show ── */
+    /* Sounds — add files to assets/sounds/ and uncomment
+    const sounds = {
+      leafRustleLight:  new Audio('assets/sounds/leaf-rustle-light.mp3'),
+      leafRustleLoud:   new Audio('assets/sounds/leaf-rustle-loud.mp3'),
+      pullCord:         new Audio('assets/sounds/pull-cord.mp3'),
+      shipAmbience:     new Audio('assets/sounds/ship-ambience.mp3'),
+      sailorsYell:      new Audio('assets/sounds/sailors-yell.mp3'),
+      splash:           new Audio('assets/sounds/splash.mp3'),
+      catPurr:          new Audio('assets/sounds/cat-purr.mp3'),
+      catMeow:          new Audio('assets/sounds/cat-meow.mp3'),
+      birdSquawk:       new Audio('assets/sounds/bird-squawk.mp3'),
+      eyeSquish:        new Audio('assets/sounds/eye-squish.mp3'),
+      pipeclang:        new Audio('assets/sounds/pipe-clang.mp3'),
+      eggPercuss:       new Audio('assets/sounds/egg-percuss.mp3'),
+      bookFlutter:      new Audio('assets/sounds/book-flutter.mp3'),
+      windowGiggle:     new Audio('assets/sounds/window-giggle.mp3'),
+      windowKnock:      new Audio('assets/sounds/window-knock.mp3'),
+      doorKnock:        new Audio('assets/sounds/door-knock.mp3'),
+      footsteps:        new Audio('assets/sounds/footsteps.mp3'),
+      shoePop:          new Audio('assets/sounds/shoe-pop.mp3'),
+      feetGiggle:       new Audio('assets/sounds/feet-giggle.mp3'),
+      guyHover: [
+        new Audio('assets/sounds/guy-what-are-you-doing.mp3'),
+        new Audio('assets/sounds/guy-do-you-mind.mp3'),
+        new Audio('assets/sounds/guy-could-you-stop.mp3'),
+        new Audio('assets/sounds/guy-knock-that-off.mp3'),
+      ],
+      guyClick: [
+        new Audio('assets/sounds/guy-hey.mp3'),
+        new Audio('assets/sounds/guy-quit-it.mp3'),
+        new Audio('assets/sounds/guy-get-away.mp3'),
+      ],
+    };
+    function play(s) { s.currentTime = 0; s.play().catch(()=>{}); }
+    */
+
+
+    /* ════════════════════════════════════════
+       SCROLL HIDE / SHOW
+    ════════════════════════════════════════ */
     let lastScroll = 0, isHidden = false;
 
     function hideHeader() {
@@ -522,23 +776,29 @@
       header.classList.remove('hidden');
       body.classList.remove('header-hidden');
       leafPull.classList.remove('visible');
-      header.style.transform = '';
+      header.style.transform  = '';
       header.style.transition = '';
     }
 
     window.addEventListener('scroll', () => {
       const s = window.scrollY;
-      if (s > HEADER_H * 0.35 && s > lastScroll) hideHeader();
+      if (s > header.offsetHeight * 0.35 && s > lastScroll) hideHeader();
       else if (s < 8) showHeader();
       lastScroll = s;
     }, { passive: true });
 
-    /* ── Leaf pull cord ── */
+
+    /* ════════════════════════════════════════
+       B15 — PULL-DOWN LEAF (draw cord mechanic)
+       Dragging down more than PULL_THRESHOLD
+       snaps the header open.
+    ════════════════════════════════════════ */
     let dragging = false, dragStart = 0, dragDelta = 0;
 
     function onDragStart(y) {
       dragging = true; dragStart = y; dragDelta = 0;
       leafPull.classList.add('grabbing');
+      el('b15-pullleaf') && el('b15-pullleaf').classList.add('grabbing');
     }
 
     function onDragMove(y) {
@@ -546,15 +806,17 @@
       dragDelta = Math.max(0, y - dragStart);
       pullStr.style.height = (32 + dragDelta * 0.55) + 'px';
       const pct = Math.min(dragDelta / PULL_THRESHOLD, 1);
-      header.style.transform  = `translateY(${-(HEADER_H * (1 - pct))}px)`;
+      header.style.transform  = `translateY(${-(header.offsetHeight * (1 - pct))}px)`;
       header.style.transition = 'none';
+      // play(sounds.pullCord);
     }
 
     function onDragEnd() {
       if (!dragging) return;
       dragging = false;
       leafPull.classList.remove('grabbing');
-      pullStr.style.height = '32px';
+      el('b15-pullleaf') && el('b15-pullleaf').classList.remove('grabbing');
+      pullStr.style.height   = '32px';
       header.style.transition = '';
       if (dragDelta >= PULL_THRESHOLD) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -566,81 +828,360 @@
 
     leafPull.addEventListener('mousedown',  e => { onDragStart(e.clientY); e.preventDefault(); });
     leafPull.addEventListener('touchstart', e => { onDragStart(e.touches[0].clientY); }, { passive: true });
-    window.addEventListener('mousemove',   e => onDragMove(e.clientY));
-    window.addEventListener('touchmove',   e => onDragMove(e.touches[0].clientY), { passive: true });
-    window.addEventListener('mouseup',     onDragEnd);
-    window.addEventListener('touchend',    onDragEnd);
 
-    /* ── Nav zones ── */
-    function scrollTo(sel) {
-      const el = document.querySelector(sel);
-      if (!el) return;
-      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 20, behavior: 'smooth' });
+    // B15 in-scene also triggers the pull cord
+    const b15 = el('b15-pullleaf');
+    if (b15) {
+      b15.addEventListener('mousedown',  e => { onDragStart(e.clientY); e.preventDefault(); });
+      b15.addEventListener('touchstart', e => { onDragStart(e.touches[0].clientY); }, { passive: true });
     }
 
-    document.getElementById('nav-about')  .addEventListener('click', () => scrollTo('#about'));
-    document.getElementById('nav-contact').addEventListener('click', () => scrollTo('#contact'));
+    window.addEventListener('mousemove', e => onDragMove(e.clientY));
+    window.addEventListener('touchmove', e => onDragMove(e.touches[0].clientY), { passive: true });
+    window.addEventListener('mouseup',   onDragEnd);
+    window.addEventListener('touchend',  onDragEnd);
 
-    /* ── Physics spring foundation ──
-       Seed positions are fractions of header width/height.
-       Adjust x/y values after viewing header in browser
-       to match where the leaves and feet actually sit. */
-    const canvas = document.getElementById('physics-canvas');
-    const ctx    = canvas.getContext('2d');
 
-    function resize() { canvas.width = window.innerWidth; canvas.height = HEADER_H; }
-    resize();
-    window.addEventListener('resize', resize);
+    /* ════════════════════════════════════════
+       NAV — B7 About + B20 Contact
+    ════════════════════════════════════════ */
+    function scrollTo(selector) {
+      const target = qs(selector);
+      if (!target) return;
+      window.scrollTo({
+        top: target.getBoundingClientRect().top + window.scrollY - 20,
+        behavior: 'smooth'
+      });
+    }
 
-    const SPRING_K = 0.16, DAMPING = 0.70, PUSH = 14;
+    el('b7-about')   && el('b7-about')  .addEventListener('click', () => scrollTo('#about'));
+    el('b20-contact') && el('b20-contact').addEventListener('click', () => scrollTo('#contact'));
 
-    const particles = [
-      { x: 0.05, y: 0.55 }, // leaf 1 — adjust to match your drawing
-      { x: 0.08, y: 0.65 }, // leaf 2
-      { x: 0.03, y: 0.72 }, // leaf 3
-      { x: 0.11, y: 0.78 }, // leaf 4
-      { x: 0.91, y: 0.78 }, // foot 1
-      { x: 0.93, y: 0.86 }, // foot 2
-    ].map(p => ({
-      wx: p.x * window.innerWidth, wy: p.y * HEADER_H,
-      rx: p.x * window.innerWidth, ry: p.y * HEADER_H,
-      vx: 0, vy: 0,
-    }));
 
-    let mx = -999, my = -999, active = false;
+    /* ════════════════════════════════════════
+       B1 — LEAFS
+       Spring physics on hover. Click removes one leaf.
+       Individual leaf PNGs needed for the fall-off effect.
+    ════════════════════════════════════════ */
+    const b1 = el('b1-leafs');
+    if (b1) {
+      b1.style.transition = 'transform 0.15s ease';
+      b1.addEventListener('mouseenter', () => {
+        b1.style.transform = 'rotate(-3deg) translate(-2px, 2px)';
+        // play(sounds.leafRustleLight);
+      });
+      b1.addEventListener('mouseleave', () => {
+        b1.style.transform = '';
+      });
+      b1.addEventListener('click', () => {
+        b1.style.transform = 'rotate(-8deg) translate(-4px, 4px)';
+        setTimeout(() => b1.style.transform = '', 300);
+        // play(sounds.leafRustleLoud);
+        // TODO: individual leaf fall-off when sub-PNGs are ready
+      });
+    }
 
-    header.addEventListener('mousemove', e => {
-      const r = header.getBoundingClientRect();
-      mx = e.clientX - r.left; my = e.clientY - r.top;
-      active = true;
-    });
-    header.addEventListener('mouseleave', () => { active = false; mx = -999; my = -999; });
 
-    function tick() {
-      requestAnimationFrame(tick);
-      const moving = particles.some(p => Math.abs(p.vx) > 0.08 || Math.abs(p.vy) > 0.08);
-      if (!active && !moving) { ctx.clearRect(0,0,canvas.width,canvas.height); return; }
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      particles.forEach(p => {
-        if (active) {
-          const dx = p.wx-mx, dy = p.wy-my, d = Math.sqrt(dx*dx+dy*dy);
-          if (d < 70 && d > 0) { const f=(1-d/70)*PUSH; p.vx+=(dx/d)*f; p.vy+=(dy/d)*f; }
+    /* ════════════════════════════════════════
+       B2 — BOAT
+       Idle bob animation. Sinks on repeated clicks.
+    ════════════════════════════════════════ */
+    const b2 = el('b2-boat');
+    let boatClicks = 0;
+
+    if (b2) {
+      // Idle bob
+      b2.style.animation = 'bob 3s ease-in-out infinite';
+      const boatStyle = document.createElement('style');
+      boatStyle.textContent = `
+        @keyframes bob {
+          0%,100% { transform: translateY(0px) rotate(0deg); }
+          50%      { transform: translateY(-4px) rotate(1deg); }
         }
-        p.vx += (p.rx-p.wx)*SPRING_K; p.vy += (p.ry-p.wy)*SPRING_K;
-        p.vx *= DAMPING; p.vy *= DAMPING;
-        p.wx += p.vx; p.wy += p.vy;
-        const disp = Math.hypot(p.wx-p.rx, p.wy-p.ry);
-        if (disp > 0.8) {
-          ctx.save();
-          ctx.strokeStyle = '#1a3a1a'; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.35;
-          ctx.beginPath(); ctx.moveTo(p.rx,p.ry); ctx.lineTo(p.wx,p.wy); ctx.stroke();
-          ctx.fillStyle = '#2a5a2a'; ctx.globalAlpha = 0.45;
-          ctx.beginPath(); ctx.arc(p.wx,p.wy,3.5,0,Math.PI*2); ctx.fill();
-          ctx.restore();
+        @keyframes sink {
+          0%   { transform: translateY(0); opacity: 1; }
+          100% { transform: translateY(40px); opacity: 0; }
+        }
+      `;
+      document.head.appendChild(boatStyle);
+
+      b2.style.pointerEvents = 'all';
+      b2.style.cursor = 'pointer';
+
+      b2.addEventListener('mouseenter', () => {
+        // play(sounds.shipAmbience);
+      });
+      b2.addEventListener('click', () => {
+        boatClicks++;
+        // play(sounds.sailorsYell);
+        if (boatClicks >= 5) {
+          b2.style.animation = 'sink 1.5s ease-in forwards';
+          // After sink, boat is gone until page reload
         }
       });
     }
-    requestAnimationFrame(tick);
+
+
+    /* ════════════════════════════════════════
+       B3 — WATER
+       Splash on click.
+    ════════════════════════════════════════ */
+    const b3 = el('b3-water');
+    if (b3) {
+      b3.style.pointerEvents = 'all';
+      b3.style.cursor = 'pointer';
+      b3.addEventListener('click', () => {
+        b3.style.transform = 'scaleY(1.06)';
+        setTimeout(() => b3.style.transform = '', 200);
+        // play(sounds.splash);
+      });
+    }
+
+
+    /* ════════════════════════════════════════
+       B4 — SUN
+       Toggle — switches page background on/off.
+       Too many clicks and it falls.
+    ════════════════════════════════════════ */
+    const b4 = el('b4-sun');
+    let sunOn = true, sunClicks = 0;
+
+    if (b4) {
+      b4.style.pointerEvents = 'all';
+      b4.style.cursor = 'pointer';
+      b4.style.transition = 'transform 0.3s ease, opacity 0.5s';
+
+      b4.addEventListener('click', () => {
+        sunClicks++;
+        sunOn = !sunOn;
+        body.style.background = sunOn ? 'var(--paper)' : '#1a1814';
+        body.style.color      = sunOn ? 'var(--ink)'   : '#c8c0b0';
+        b4.style.opacity = sunOn ? '1' : '0.3';
+
+        if (sunClicks >= 8) {
+          const fallStyle = document.createElement('style');
+          fallStyle.textContent = `@keyframes sunfall { to { transform: translateY(200%) rotate(180deg); opacity:0; } }`;
+          document.head.appendChild(fallStyle);
+          b4.style.animation = 'sunfall 1.2s ease-in forwards';
+        }
+      });
+    }
+
+
+    /* ════════════════════════════════════════
+       B6 — BUBBLES
+       Pop and disappear on click.
+    ════════════════════════════════════════ */
+    const b6 = el('b6-bubbles');
+    if (b6) {
+      b6.style.pointerEvents = 'all';
+      b6.style.cursor = 'pointer';
+      b6.style.transition = 'transform 0.1s, opacity 0.3s';
+      b6.addEventListener('click', () => {
+        b6.style.transform = 'scale(1.15)';
+        setTimeout(() => {
+          b6.style.transform = 'scale(0)';
+          b6.style.opacity   = '0';
+        }, 100);
+      });
+    }
+
+
+    /* ════════════════════════════════════════
+       B18 — CAT
+       Hover: purr. Click: meow, eyes follow mouse.
+       Hover for 3s: closes eyes.
+    ════════════════════════════════════════ */
+    const b18 = el('b18-cat');
+    let catHoverTimer = null;
+
+    if (b18) {
+      b18.style.transition = 'transform 0.2s ease';
+
+      b18.addEventListener('mouseenter', () => {
+        // play(sounds.catPurr);
+        catHoverTimer = setTimeout(() => {
+          b18.style.opacity = '0.85'; // squint — replace with eyes-closed PNG swap when ready
+        }, 3000);
+      });
+
+      b18.addEventListener('mouseleave', () => {
+        clearTimeout(catHoverTimer);
+        b18.style.opacity = '1';
+      });
+
+      b18.addEventListener('click', () => {
+        // play(sounds.catMeow);
+        // TODO: eye follow — track mousemove and offset eyeball PNG
+      });
+    }
+
+
+    /* ════════════════════════════════════════
+       B21 — GUY WITH HAIR
+       Hover: cycle through complaint voice lines.
+       Click: sharper response lines + shake.
+    ════════════════════════════════════════ */
+    const b21 = el('b21-guy');
+    const hoverLines = ["What are you doing?","Do you mind?","Ummm, could you stop that?","Knock that off"];
+    const clickLines = ["Hey!","Quit it","Get away from me, creep"];
+    let hoverIdx = 0, clickIdx = 0;
+
+    if (b21) {
+      b21.style.transition = 'transform 0.1s';
+
+      b21.addEventListener('mouseenter', () => {
+        // Show caption / play audio
+        // play(sounds.guyHover[hoverIdx % sounds.guyHover.length]);
+        hoverIdx++;
+      });
+
+      b21.addEventListener('click', () => {
+        b21.style.transform = 'translateX(-3px) rotate(-2deg)';
+        setTimeout(() => b21.style.transform = '', 200);
+        // play(sounds.guyClick[clickIdx % sounds.guyClick.length]);
+        clickIdx++;
+      });
+    }
+
+
+    /* ════════════════════════════════════════
+       B24 — WINDOW WITH GUYS
+       Giggle on hover. Each click removes one guy.
+       Knock on click.
+    ════════════════════════════════════════ */
+    const b24 = el('b24-window');
+    let windowGuys = 3; // adjust to how many guys are in your PNG
+
+    if (b24) {
+      b24.addEventListener('mouseenter', () => {
+        // play(sounds.windowGiggle);
+      });
+      b24.addEventListener('click', () => {
+        // play(sounds.windowKnock);
+        windowGuys--;
+        // TODO: swap to sub-PNGs (guy1, guy2, guy3) as they disappear
+        if (windowGuys <= 0) b24.style.opacity = '0.3';
+      });
+    }
+
+
+    /* ════════════════════════════════════════
+       B26 / B26.1 — BAD TEETH GUY FEET
+       Hover: dangle physics (spring).
+       Click: shoes pop off, reveal B26.1.
+    ════════════════════════════════════════ */
+    const b26      = el('b26-feet');
+    const b261     = el('b261-dangle');
+    let shoesOn    = true;
+
+    if (b26 && b261) {
+      b261.style.opacity = '0'; // hidden until shoes pop off
+
+      // Spring dangle on hover
+      let vy = 0, py = 0;
+      const SPRING = 0.2, DAMP = 0.65;
+
+      b26.addEventListener('mouseenter', () => {
+        // play(sounds.footsteps);
+      });
+
+      b26.addEventListener('click', () => {
+        if (shoesOn) {
+          shoesOn = false;
+          b26.style.opacity  = '0';   // hide feet-with-shoes
+          b261.style.opacity = '1';   // show dangling feet
+          // play(sounds.shoePop);
+          // Animate pop
+          b261.style.transition = 'transform 0.15s';
+          b261.style.transform  = 'translateY(-12px)';
+          setTimeout(() => b261.style.transform = '', 150);
+        } else {
+          // Already off — giggle
+          b261.style.transform = 'rotate(5deg)';
+          setTimeout(() => b261.style.transform = '', 200);
+          // play(sounds.feetGiggle);
+        }
+      });
+
+      // Passive sway animation on B26.1
+      if (b261) {
+        const swayEl = document.createElement('style');
+        swayEl.textContent = `
+          @keyframes feetdangle {
+            0%,100% { transform: rotate(-4deg); }
+            50%      { transform: rotate(4deg); }
+          }
+        `;
+        document.head.appendChild(swayEl);
+        b261.style.animation       = 'feetdangle 2s ease-in-out infinite';
+        b261.style.transformOrigin = '50% 0%';
+      }
+    }
+
+
+    /* ════════════════════════════════════════
+       B27 — DOOR
+       Three knocks → guy pops out, tells you to keep it down.
+    ════════════════════════════════════════ */
+    const b27 = el('b27-door2');
+    let doorKnocks = 0;
+
+    if (b27) {
+      b27.addEventListener('click', () => {
+        doorKnocks++;
+        // play(sounds.doorKnock);
+        b27.style.transform = 'translateX(2px)';
+        setTimeout(() => b27.style.transform = '', 100);
+
+        if (doorKnocks >= 3) {
+          doorKnocks = 0;
+          // TODO: show popup guy element
+          // For now just a brief flash
+          b27.style.filter = 'brightness(1.4)';
+          setTimeout(() => b27.style.filter = '', 600);
+        }
+      });
+    }
+
+
+    /* ════════════════════════════════════════
+       INTERACTION REGISTRY
+       Browser console: ELUE.interactions()
+    ════════════════════════════════════════ */
+    window.ELUE = {
+      interactions: () => {
+        console.table([
+          { ref:'B1',   el:'Leafs',                  hover:'rustle (stub)',    click:'fall off (todo)',      status:'partial' },
+          { ref:'B2',   el:'Boat',                   hover:'ship ambience',    click:'sink after 5',         status:'partial' },
+          { ref:'B3',   el:'Water',                  hover:'—',               click:'splash',               status:'partial' },
+          { ref:'B4',   el:'Sun',                    hover:'—',               click:'toggle light/dark',    status:'partial' },
+          { ref:'B6',   el:'Bubbles',                hover:'—',               click:'pop + disappear',      status:'done'    },
+          { ref:'B7',   el:'About (nav)',             hover:'—',               click:'scroll to About',      status:'done'    },
+          { ref:'B9',   el:'Apartment door',          hover:'—',               click:'knock',                status:'planned' },
+          { ref:'B10',  el:'Eggs',                   hover:'—',               click:'shake + tone',         status:'planned' },
+          { ref:'B11',  el:'Bird center',             hover:'—',               click:'squawk + eye follow',  status:'planned' },
+          { ref:'B12',  el:'Eyes',                   hover:'—',               click:'blink + follow',       status:'planned' },
+          { ref:'B14',  el:'Background birds',        hover:'—',               click:'flap + disappear',     status:'planned' },
+          { ref:'B15',  el:'Pull-down leaf (cord)',   hover:'rustle',          click:'reveal header',        status:'done'    },
+          { ref:'B16',  el:'Metal pipe',              hover:'—',               click:'clang + vibrate',      status:'planned' },
+          { ref:'B17',  el:'Bird right',              hover:'—',               click:'squawk + eye follow',  status:'planned' },
+          { ref:'B18',  el:'Cat',                    hover:'purr / eye close', click:'meow + eye follow',   status:'partial' },
+          { ref:'B20',  el:'Contact (nav)',           hover:'—',               click:'scroll to Contact',    status:'done'    },
+          { ref:'B21',  el:'Guy with hair',           hover:'voice lines',     click:'shake + voice',        status:'partial' },
+          { ref:'B22',  el:'Apartment right',         hover:'ambience',        click:'lights off + scream',  status:'planned' },
+          { ref:'B23',  el:'Big book',                hover:'page flutter',    click:'—',                   status:'planned' },
+          { ref:'B24',  el:'Window with guys',        hover:'giggle',          click:'guys disappear',       status:'partial' },
+          { ref:'B25',  el:'Bad teeth guy',           hover:'mumble',          click:'voice lines',          status:'planned' },
+          { ref:'B26',  el:'Bad teeth guy feet',      hover:'footsteps',       click:'shoes pop off',        status:'partial' },
+          { ref:'B26.1',el:'Feet dangling',           hover:'dangle',          click:'giggle',               status:'partial' },
+          { ref:'B27',  el:'Door far right',          hover:'—',               click:'3 knocks → guy pops', status:'partial' },
+          { ref:'B28',  el:'Eyeball above Elue',      hover:'—',               click:'—',                   status:'planned' },
+          { ref:'Scroll',el:'Header hide/show',       hover:'—',               click:'—',                   status:'done'    },
+          { ref:'Pull',  el:'Leaf pull cord',         hover:'—',               click:'drag to reveal',       status:'done'    },
+        ]);
+      }
+    };
 
   })();
   </script>
