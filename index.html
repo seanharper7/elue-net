@@ -65,7 +65,8 @@
     #site-header.hidden { transform: translateY(-100%); }
 
     /* All layers — background and elements — share this base.
-       Since they're all from the same canvas they crop identically. */
+       Since they're all from the same canvas they crop identically.
+       object-position: bottom = show bottom of drawing, crop top sky. */
     #bg,
     .scene-el {
       position: absolute;
@@ -73,7 +74,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      object-position: top center;
+      object-position: bottom center;
       pointer-events: none;
       user-select: none;
       -webkit-user-drag: none;
@@ -81,15 +82,9 @@
 
     #bg { filter: contrast(1.05); }
 
-    /* Interactive elements */
-    .scene-el.interactive {
-      pointer-events: all;
-      cursor: pointer;
-    }
-
-    /* B15 pull leaf — grab cursor */
-    #b15-pullleaf          { cursor: grab; pointer-events: all; }
-    #b15-pullleaf.grabbing { cursor: grabbing; }
+    /* No pointer-events on any scene-el — interaction handled
+       by a single JS listener on the header using hit regions */
+    .scene-el { pointer-events: none; }
 
 
     /* ─────────────────────────────────────────
@@ -615,6 +610,14 @@
     const HEADER_H      = header.offsetHeight; // matches 42vh in CSS
     const PULL_THRESHOLD = 80;
 
+    // State
+    let boatClicks  = 0;
+    let sunOn       = true, sunClicks = 0;
+    let catClicks   = 0;
+    let windowGuys  = 3;
+    let shoesOn     = true;
+    let doorKnocks  = 0;
+
     /* Sounds — add files to assets/sounds/ and uncomment
     const sounds = {
       leafRustleLight:  new Audio('assets/sounds/leaf-rustle-light.mp3'),
@@ -740,10 +743,233 @@
 
 
     /* ════════════════════════════════════════
-       NAV — B7 About + B20 Contact
+       UNIFIED HIT REGION SYSTEM
+       Because all PNGs are full-size overlays, pointer events
+       on individual elements don't work — the topmost layer
+       catches everything. Instead we use a single listener on
+       the header and check which named region was hit.
+
+       Regions are defined as fractions of the ORIGINAL canvas
+       (3161 × 1124). The browser scales/crops with object-fit:cover
+       + object-position:bottom, so we account for that offset.
+
+       TO ADJUST A REGION:
+       Change the x/y/w/h values. All are 0–1 fractions of canvas.
+       x=left edge, y=top edge, w=width, h=height.
+
+       Regions are checked top-to-bottom — first match wins.
     ════════════════════════════════════════ */
+
+    const CANVAS_W = 3161;
+    const CANVAS_H = 1124;
+
+    // Regions — tune these after viewing in browser
+    // Format: { id, x, y, w, h, cursor }
+    const hitRegions = [
+      { id: 'about',    x: 0.14, y: 0.55, w: 0.10, h: 0.30, cursor: 'pointer' },
+      { id: 'contact',  x: 0.57, y: 0.55, w: 0.12, h: 0.30, cursor: 'pointer' },
+      { id: 'pullleaf', x: 0.44, y: 0.00, w: 0.08, h: 0.40, cursor: 'grab'    },
+      { id: 'cat',      x: 0.62, y: 0.40, w: 0.08, h: 0.35, cursor: 'pointer' },
+      { id: 'guy',      x: 0.70, y: 0.25, w: 0.07, h: 0.40, cursor: 'pointer' },
+      { id: 'window',   x: 0.78, y: 0.30, w: 0.08, h: 0.35, cursor: 'pointer' },
+      { id: 'feet',     x: 0.84, y: 0.50, w: 0.07, h: 0.45, cursor: 'pointer' },
+      { id: 'door',     x: 0.91, y: 0.35, w: 0.06, h: 0.45, cursor: 'pointer' },
+      { id: 'boat',     x: 0.12, y: 0.45, w: 0.10, h: 0.30, cursor: 'pointer' },
+      { id: 'water',    x: 0.06, y: 0.65, w: 0.22, h: 0.25, cursor: 'pointer' },
+      { id: 'sun',      x: 0.01, y: 0.02, w: 0.06, h: 0.20, cursor: 'pointer' },
+    ];
+
+    // Convert canvas-fraction coords to screen coords,
+    // accounting for object-fit:cover + object-position:bottom
+    function canvasToScreen(cx, cy) {
+      const rect    = header.getBoundingClientRect();
+      const screenW = rect.width;
+      const screenH = rect.height;
+
+      // Scale factor — cover means the canvas fills the container
+      const scale = Math.max(screenW / CANVAS_W, screenH / CANVAS_H);
+      const scaledW = CANVAS_W * scale;
+      const scaledH = CANVAS_H * scale;
+
+      // object-position: bottom → align bottom edges
+      const offsetX = (screenW - scaledW) / 2;   // center horizontally
+      const offsetY = screenH - scaledH;          // align to bottom
+
+      return {
+        x: cx * scaledW + offsetX,
+        y: cy * scaledH + offsetY,
+      };
+    }
+
+    function getHitRegion(mouseX, mouseY) {
+      for (const r of hitRegions) {
+        const tl = canvasToScreen(r.x,       r.y);
+        const br = canvasToScreen(r.x + r.w, r.y + r.h);
+        if (mouseX >= tl.x && mouseX <= br.x &&
+            mouseY >= tl.y && mouseY <= br.y) {
+          return r;
+        }
+      }
+      return null;
+    }
+
+    // Cursor tracking
+    header.addEventListener('mousemove', e => {
+      const rect = header.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const region = getHitRegion(mx, my);
+      header.style.cursor = region ? region.cursor : 'default';
+      onHeaderHover(region, mx, my);
+    });
+
+    header.addEventListener('mouseleave', () => {
+      header.style.cursor = 'default';
+    });
+
+    header.addEventListener('click', e => {
+      const rect = header.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const region = getHitRegion(mx, my);
+      if (region) onHeaderClick(region);
+    });
+
+    // Mousedown on header for pull cord drag
+    header.addEventListener('mousedown', e => {
+      const rect = header.getBoundingClientRect();
+      const region = getHitRegion(e.clientX - rect.left, e.clientY - rect.top);
+      if (region && region.id === 'pullleaf') {
+        onDragStart(e.clientY);
+        e.preventDefault();
+      }
+    });
+
+    header.addEventListener('touchstart', e => {
+      const rect   = header.getBoundingClientRect();
+      const tx     = e.touches[0].clientX - rect.left;
+      const ty     = e.touches[0].clientY - rect.top;
+      const region = getHitRegion(tx, ty);
+      if (region && region.id === 'pullleaf') {
+        onDragStart(e.touches[0].clientY);
+      }
+    }, { passive: true });
+
+    /* ── Hover handler ── */
+    function onHeaderHover(region, mx, my) {
+      if (!region) return;
+      // Add hover effects here as you build them
+      // e.g. if (region.id === 'cat') { ... }
+    }
+
+    /* ── Click handler ── */
+    function onHeaderClick(region) {
+      switch(region.id) {
+
+        case 'about':
+          scrollTo('#about');
+          break;
+
+        case 'contact':
+          scrollTo('#contact');
+          break;
+
+        case 'pullleaf':
+          // Drag handled by mousedown above
+          break;
+
+        case 'boat':
+          boatClicks++;
+          // play(sounds.sailorsYell);
+          if (boatClicks >= 5) {
+            el('b2-boat').style.transition = 'transform 1.5s ease-in, opacity 1.5s';
+            el('b2-boat').style.transform  = 'translateY(40px)';
+            el('b2-boat').style.opacity    = '0';
+          }
+          break;
+
+        case 'water':
+          el('b3-water') && (() => {
+            const w = el('b3-water');
+            w.style.transition = 'transform 0.15s';
+            w.style.transform  = 'scaleY(1.06)';
+            setTimeout(() => w.style.transform = '', 200);
+            // play(sounds.splash);
+          })();
+          break;
+
+        case 'sun':
+          sunClicks++;
+          sunOn = !sunOn;
+          body.style.background = sunOn ? '' : '#1a1814';
+          body.style.color      = sunOn ? '' : '#c8c0b0';
+          el('b4-sun') && (el('b4-sun').style.opacity = sunOn ? '1' : '0.3');
+          if (sunClicks >= 8 && el('b4-sun')) {
+            el('b4-sun').style.transition = 'transform 1.2s ease-in, opacity 1.2s';
+            el('b4-sun').style.transform  = 'translateY(200%) rotate(180deg)';
+            el('b4-sun').style.opacity    = '0';
+          }
+          break;
+
+        case 'cat':
+          catClicks++;
+          // play(sounds.catMeow);
+          el('b18-cat') && (() => {
+            const c = el('b18-cat');
+            c.style.transition = 'transform 0.1s';
+            c.style.transform  = 'scale(1.04)';
+            setTimeout(() => c.style.transform = '', 200);
+          })();
+          break;
+
+        case 'guy':
+          el('b21-guy') && (() => {
+            const g = el('b21-guy');
+            g.style.transition = 'transform 0.1s';
+            g.style.transform  = 'translateX(-3px) rotate(-2deg)';
+            setTimeout(() => g.style.transform = '', 200);
+            // play(sounds.guyClick[clickIdx++ % sounds.guyClick.length]);
+          })();
+          break;
+
+        case 'window':
+          windowGuys--;
+          // play(sounds.windowKnock);
+          if (windowGuys <= 0 && el('b24-window')) {
+            el('b24-window').style.transition = 'opacity 0.5s';
+            el('b24-window').style.opacity    = '0.2';
+          }
+          break;
+
+        case 'feet':
+          if (shoesOn) {
+            shoesOn = false;
+            el('b26-feet')  && (el('b26-feet').style.opacity  = '0');
+            el('b261-dangle') && (el('b261-dangle').style.opacity = '1');
+            // play(sounds.shoePop);
+          } else {
+            // play(sounds.feetGiggle);
+          }
+          break;
+
+        case 'door':
+          doorKnocks++;
+          // play(sounds.doorKnock);
+          if (doorKnocks >= 3) {
+            doorKnocks = 0;
+            el('b27-door2') && (() => {
+              const d = el('b27-door2');
+              d.style.filter = 'brightness(1.5)';
+              setTimeout(() => d.style.filter = '', 600);
+            })();
+          }
+          break;
+      }
+    }
+
+    /* ── Nav scroll ── */
     function scrollTo(selector) {
-      const target = qs(selector);
+      const target = document.querySelector(selector);
       if (!target) return;
       window.scrollTo({
         top: target.getBoundingClientRect().top + window.scrollY - 20,
@@ -751,295 +977,31 @@
       });
     }
 
-    el('b7-about')   && el('b7-about')  .addEventListener('click', () => scrollTo('#about'));
-    el('b20-contact') && el('b20-contact').addEventListener('click', () => scrollTo('#contact'));
-
 
     /* ════════════════════════════════════════
-       B1 — LEAFS
-       Spring physics on hover. Click removes one leaf.
-       Individual leaf PNGs needed for the fall-off effect.
+       B26.1 — FEET IDLE SWAY
     ════════════════════════════════════════ */
-    const b1 = el('b1-leafs');
-    if (b1) {
-      b1.style.transition = 'transform 0.15s ease';
-      b1.addEventListener('mouseenter', () => {
-        b1.style.transform = 'rotate(-3deg) translate(-2px, 2px)';
-        // play(sounds.leafRustleLight);
-      });
-      b1.addEventListener('mouseleave', () => {
-        b1.style.transform = '';
-      });
-      b1.addEventListener('click', () => {
-        b1.style.transform = 'rotate(-8deg) translate(-4px, 4px)';
-        setTimeout(() => b1.style.transform = '', 300);
-        // play(sounds.leafRustleLoud);
-        // TODO: individual leaf fall-off when sub-PNGs are ready
-      });
-    }
-
-
-    /* ════════════════════════════════════════
-       B2 — BOAT
-       Idle bob animation. Sinks on repeated clicks.
-    ════════════════════════════════════════ */
-    const b2 = el('b2-boat');
-    let boatClicks = 0;
-
-    if (b2) {
-      // Idle bob
-      b2.style.animation = 'bob 3s ease-in-out infinite';
-      const boatStyle = document.createElement('style');
-      boatStyle.textContent = `
+    const b261 = el('b261-dangle');
+    if (b261) {
+      b261.style.opacity         = '0';
+      b261.style.animation       = 'feetdangle 2s ease-in-out infinite';
+      b261.style.transformOrigin = '50% 0%';
+      const swayStyle = document.createElement('style');
+      swayStyle.textContent = `
+        @keyframes feetdangle {
+          0%,100% { transform: rotate(-4deg); }
+          50%      { transform: rotate(4deg); }
+        }
         @keyframes bob {
           0%,100% { transform: translateY(0px) rotate(0deg); }
           50%      { transform: translateY(-4px) rotate(1deg); }
         }
-        @keyframes sink {
-          0%   { transform: translateY(0); opacity: 1; }
-          100% { transform: translateY(40px); opacity: 0; }
-        }
       `;
-      document.head.appendChild(boatStyle);
-
-      b2.style.pointerEvents = 'all';
-      b2.style.cursor = 'pointer';
-
-      b2.addEventListener('mouseenter', () => {
-        // play(sounds.shipAmbience);
-      });
-      b2.addEventListener('click', () => {
-        boatClicks++;
-        // play(sounds.sailorsYell);
-        if (boatClicks >= 5) {
-          b2.style.animation = 'sink 1.5s ease-in forwards';
-          // After sink, boat is gone until page reload
-        }
-      });
+      document.head.appendChild(swayStyle);
     }
 
-
-    /* ════════════════════════════════════════
-       B3 — WATER
-       Splash on click.
-    ════════════════════════════════════════ */
-    const b3 = el('b3-water');
-    if (b3) {
-      b3.style.pointerEvents = 'all';
-      b3.style.cursor = 'pointer';
-      b3.addEventListener('click', () => {
-        b3.style.transform = 'scaleY(1.06)';
-        setTimeout(() => b3.style.transform = '', 200);
-        // play(sounds.splash);
-      });
-    }
-
-
-    /* ════════════════════════════════════════
-       B4 — SUN
-       Toggle — switches page background on/off.
-       Too many clicks and it falls.
-    ════════════════════════════════════════ */
-    const b4 = el('b4-sun');
-    let sunOn = true, sunClicks = 0;
-
-    if (b4) {
-      b4.style.pointerEvents = 'all';
-      b4.style.cursor = 'pointer';
-      b4.style.transition = 'transform 0.3s ease, opacity 0.5s';
-
-      b4.addEventListener('click', () => {
-        sunClicks++;
-        sunOn = !sunOn;
-        body.style.background = sunOn ? 'var(--paper)' : '#1a1814';
-        body.style.color      = sunOn ? 'var(--ink)'   : '#c8c0b0';
-        b4.style.opacity = sunOn ? '1' : '0.3';
-
-        if (sunClicks >= 8) {
-          const fallStyle = document.createElement('style');
-          fallStyle.textContent = `@keyframes sunfall { to { transform: translateY(200%) rotate(180deg); opacity:0; } }`;
-          document.head.appendChild(fallStyle);
-          b4.style.animation = 'sunfall 1.2s ease-in forwards';
-        }
-      });
-    }
-
-
-    /* ════════════════════════════════════════
-       B6 — BUBBLES
-       Pop and disappear on click.
-    ════════════════════════════════════════ */
-    const b6 = el('b6-bubbles');
-    if (b6) {
-      b6.style.pointerEvents = 'all';
-      b6.style.cursor = 'pointer';
-      b6.style.transition = 'transform 0.1s, opacity 0.3s';
-      b6.addEventListener('click', () => {
-        b6.style.transform = 'scale(1.15)';
-        setTimeout(() => {
-          b6.style.transform = 'scale(0)';
-          b6.style.opacity   = '0';
-        }, 100);
-      });
-    }
-
-
-    /* ════════════════════════════════════════
-       B18 — CAT
-       Hover: purr. Click: meow, eyes follow mouse.
-       Hover for 3s: closes eyes.
-    ════════════════════════════════════════ */
-    const b18 = el('b18-cat');
-    let catHoverTimer = null;
-
-    if (b18) {
-      b18.style.transition = 'transform 0.2s ease';
-
-      b18.addEventListener('mouseenter', () => {
-        // play(sounds.catPurr);
-        catHoverTimer = setTimeout(() => {
-          b18.style.opacity = '0.85'; // squint — replace with eyes-closed PNG swap when ready
-        }, 3000);
-      });
-
-      b18.addEventListener('mouseleave', () => {
-        clearTimeout(catHoverTimer);
-        b18.style.opacity = '1';
-      });
-
-      b18.addEventListener('click', () => {
-        // play(sounds.catMeow);
-        // TODO: eye follow — track mousemove and offset eyeball PNG
-      });
-    }
-
-
-    /* ════════════════════════════════════════
-       B21 — GUY WITH HAIR
-       Hover: cycle through complaint voice lines.
-       Click: sharper response lines + shake.
-    ════════════════════════════════════════ */
-    const b21 = el('b21-guy');
-    const hoverLines = ["What are you doing?","Do you mind?","Ummm, could you stop that?","Knock that off"];
-    const clickLines = ["Hey!","Quit it","Get away from me, creep"];
-    let hoverIdx = 0, clickIdx = 0;
-
-    if (b21) {
-      b21.style.transition = 'transform 0.1s';
-
-      b21.addEventListener('mouseenter', () => {
-        // Show caption / play audio
-        // play(sounds.guyHover[hoverIdx % sounds.guyHover.length]);
-        hoverIdx++;
-      });
-
-      b21.addEventListener('click', () => {
-        b21.style.transform = 'translateX(-3px) rotate(-2deg)';
-        setTimeout(() => b21.style.transform = '', 200);
-        // play(sounds.guyClick[clickIdx % sounds.guyClick.length]);
-        clickIdx++;
-      });
-    }
-
-
-    /* ════════════════════════════════════════
-       B24 — WINDOW WITH GUYS
-       Giggle on hover. Each click removes one guy.
-       Knock on click.
-    ════════════════════════════════════════ */
-    const b24 = el('b24-window');
-    let windowGuys = 3; // adjust to how many guys are in your PNG
-
-    if (b24) {
-      b24.addEventListener('mouseenter', () => {
-        // play(sounds.windowGiggle);
-      });
-      b24.addEventListener('click', () => {
-        // play(sounds.windowKnock);
-        windowGuys--;
-        // TODO: swap to sub-PNGs (guy1, guy2, guy3) as they disappear
-        if (windowGuys <= 0) b24.style.opacity = '0.3';
-      });
-    }
-
-
-    /* ════════════════════════════════════════
-       B26 / B26.1 — BAD TEETH GUY FEET
-       Hover: dangle physics (spring).
-       Click: shoes pop off, reveal B26.1.
-    ════════════════════════════════════════ */
-    const b26      = el('b26-feet');
-    const b261     = el('b261-dangle');
-    let shoesOn    = true;
-
-    if (b26 && b261) {
-      b261.style.opacity = '0'; // hidden until shoes pop off
-
-      // Spring dangle on hover
-      let vy = 0, py = 0;
-      const SPRING = 0.2, DAMP = 0.65;
-
-      b26.addEventListener('mouseenter', () => {
-        // play(sounds.footsteps);
-      });
-
-      b26.addEventListener('click', () => {
-        if (shoesOn) {
-          shoesOn = false;
-          b26.style.opacity  = '0';   // hide feet-with-shoes
-          b261.style.opacity = '1';   // show dangling feet
-          // play(sounds.shoePop);
-          // Animate pop
-          b261.style.transition = 'transform 0.15s';
-          b261.style.transform  = 'translateY(-12px)';
-          setTimeout(() => b261.style.transform = '', 150);
-        } else {
-          // Already off — giggle
-          b261.style.transform = 'rotate(5deg)';
-          setTimeout(() => b261.style.transform = '', 200);
-          // play(sounds.feetGiggle);
-        }
-      });
-
-      // Passive sway animation on B26.1
-      if (b261) {
-        const swayEl = document.createElement('style');
-        swayEl.textContent = `
-          @keyframes feetdangle {
-            0%,100% { transform: rotate(-4deg); }
-            50%      { transform: rotate(4deg); }
-          }
-        `;
-        document.head.appendChild(swayEl);
-        b261.style.animation       = 'feetdangle 2s ease-in-out infinite';
-        b261.style.transformOrigin = '50% 0%';
-      }
-    }
-
-
-    /* ════════════════════════════════════════
-       B27 — DOOR
-       Three knocks → guy pops out, tells you to keep it down.
-    ════════════════════════════════════════ */
-    const b27 = el('b27-door2');
-    let doorKnocks = 0;
-
-    if (b27) {
-      b27.addEventListener('click', () => {
-        doorKnocks++;
-        // play(sounds.doorKnock);
-        b27.style.transform = 'translateX(2px)';
-        setTimeout(() => b27.style.transform = '', 100);
-
-        if (doorKnocks >= 3) {
-          doorKnocks = 0;
-          // TODO: show popup guy element
-          // For now just a brief flash
-          b27.style.filter = 'brightness(1.4)';
-          setTimeout(() => b27.style.filter = '', 600);
-        }
-      });
-    }
+    const b2 = el('b2-boat');
+    if (b2) b2.style.animation = 'bob 3s ease-in-out infinite';
 
 
     /* ════════════════════════════════════════
