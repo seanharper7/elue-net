@@ -8,12 +8,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
     :root {
-      --paper:  #F0EBE0;
-      --ink:    #0D0B08;
-      --purple: #7C5CBF;
-      /* Canvas is 3161×1124. Show bottom 5/6 (crop top 1/6).
-         Header height = full_natural_height × 5/6
-                       = (100vw × 1124/3161) × 5/6             */
+      --paper:    #F0EBE0;
+      --ink:      #0D0B08;
+      --purple:   #7C5CBF;
+      /* Canvas 3161×1124. Show bottom 5/6 (crop top 1/6).
+         = (100vw × 1124/3161) × 5/6                         */
       --header-h: calc(100vw * 1124 / 3161 * 5 / 6);
     }
 
@@ -27,7 +26,8 @@
       font-size: 15px;
       line-height: 1.7;
       overflow-x: hidden;
-      padding-top: var(--header-h);
+      /* +2px overlap prevents 1px gap artifact at header edge */
+      padding-top: calc(var(--header-h) - 2px);
       transition: padding-top 0.5s ease;
     }
     body.header-hidden { padding-top: 0; }
@@ -40,15 +40,16 @@
       position: fixed;
       top: 0; left: 0; right: 0;
       z-index: 200;
-      height: var(--header-h);
+      /* +2px height matches body padding overlap */
+      height: calc(var(--header-h) + 2px);
       overflow: hidden;
       transform: translateY(0);
       transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
     }
     #site-header.hidden { transform: translateY(-100%); }
 
-    /* All PNGs are from the same 3161×1124 canvas.
-       object-fit:cover + object-position:bottom → top 1/6 cropped. */
+    /* All PNGs are from the same 3161×1124 Krita canvas.
+       Stacked full-size. object-position:bottom crops top 1/6. */
     .layer {
       position: absolute;
       left: 0; top: 0;
@@ -60,37 +61,6 @@
       -webkit-user-drag: none;
     }
     #bg { filter: contrast(1.05); }
-
-    /* ── Hit overlay ──
-       Positioned divs over interactive elements.
-       Transparent normally. Debug mode makes them visible.
-       Press 'd' to toggle. */
-    #hit-overlay {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      pointer-events: none;
-      z-index: 100;
-    }
-    .hit {
-      position: absolute;
-      pointer-events: all;
-      background: transparent;
-    }
-    /* Debug mode — press 'd' */
-    body.debug .hit {
-      background: rgba(255, 0, 0, 0.25);
-      border: 1.5px solid red;
-      font-size: 10px;
-      font-family: monospace;
-      color: #000;
-      padding: 2px;
-    }
-    body.debug .hit::before {
-      content: attr(data-id);
-      display: block;
-      font-weight: bold;
-    }
 
     /* ── Leaf pull cord ── */
     #leaf-pull {
@@ -139,17 +109,18 @@
       50%      { opacity: 0.3; }
     }
 
-    /* ── Idle animations (injected by JS) ── */
+    /* Idle animations */
     @keyframes bob {
-      0%,100% { transform: translateY(0) rotate(0deg); }
-      50%      { transform: translateY(-5px) rotate(1deg); }
+      /* Subtle — 2px max, no rotation */
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-2px); }
     }
     @keyframes feetdangle {
-      0%,100% { transform: rotate(-4deg); }
-      50%      { transform: rotate(4deg); }
+      0%,100% { transform: rotate(-3deg); }
+      50%      { transform: rotate(3deg); }
     }
 
-    /* ── Main content ── */
+    /* ── Main ── */
     main {
       max-width: 860px;
       margin: 0 auto;
@@ -175,10 +146,7 @@
 
     /* Work */
     #work { margin-bottom: 6rem; }
-    .project {
-      padding: 2.5rem 0;
-      border-top: 1px solid rgba(13,11,8,0.1);
-    }
+    .project { padding: 2.5rem 0; border-top: 1px solid rgba(13,11,8,0.1); }
     .project:last-child { border-bottom: 1px solid rgba(13,11,8,0.1); }
     .project-number { font-size: 0.6rem; letter-spacing: 0.2em; opacity: 0.28; margin-bottom: 0.5rem; }
     .project-title  { font-size: 1.75rem; font-weight: 700; line-height: 1.1; margin-bottom: 0.3rem; }
@@ -227,58 +195,46 @@
 </head>
 <body>
 
-  <!-- ── Header — layered PNG scene ── -->
   <header id="site-header">
-
-    <!-- B29 — Background base layer (always first) -->
-    <img class="layer" id="bg"             src="assets/B29 Background.png"                       alt="Elue scene">
-
-    <!-- Scene layers — all from same 3161×1124 canvas, overlay perfectly -->
-    <img class="layer" id="b1"             src="assets/B1 Leafs.png"                             alt="">
-    <img class="layer" id="b2"             src="assets/B2 Boat.png"                              alt="">
-    <img class="layer" id="b3"             src="assets/B3 Water.png"                             alt="">
-    <img class="layer" id="b4"             src="assets/B4 Sun.png"                               alt="">
-    <img class="layer" id="b5"             src="assets/B5 Garbage pile.png"                      alt="">
-    <img class="layer" id="b6"             src="assets/B6 White bubbles in garbage.png"          alt="">
-    <img class="layer" id="b7"             src="assets/B7 About.png"                             alt="">
-    <img class="layer" id="b8"             src="assets/B8 Apartment windows.png"                 alt="">
-    <img class="layer" id="b9"             src="assets/B9 Apartment door.png"                    alt="">
-    <img class="layer" id="b10"            src="assets/B10 Up top egg things.png"                alt="">
-    <img class="layer" id="b11"            src="assets/B11 Bird.png"                             alt="">
-    <img class="layer" id="b11-1"          src="assets/B11.1 Bird.png"                           alt="">
-    <img class="layer" id="b12"            src="assets/B12 Eyes.png"                             alt="">
-    <img class="layer" id="b13"            src="assets/B13 Elue.png"                             alt="">
-    <img class="layer" id="b14"            src="assets/B14 Elue background birds.png"            alt="">
-    <img class="layer" id="b15"            src="assets/B15 Pull down leaf.png"                   alt="">
-    <img class="layer" id="b16"            src="assets/B16 Metal pipe.png"                       alt="">
-    <img class="layer" id="b17"            src="assets/B17 Bird.png"                             alt="">
-    <img class="layer" id="b18"            src="assets/B18 Cat.png"                              alt="">
-    <img class="layer" id="b19"            src="assets/B19 Sidewalk.png"                         alt="">
-    <img class="layer" id="b20"            src="assets/B20 Contact.png"                          alt="">
-    <img class="layer" id="b21"            src="assets/B21 Guy with hair.png"                    alt="">
-    <img class="layer" id="b22"            src="assets/B22 Apartment.png"                        alt="">
-    <img class="layer" id="b23"            src="assets/B23 Big book.png"                         alt="">
-    <img class="layer" id="b24"            src="assets/B24 Window.png"                           alt="">
-    <img class="layer" id="b25"            src="assets/B25 Bad teeth guy.png"                    alt="">
-    <img class="layer" id="b26"            src="assets/B26 Bad teeth guy feet.png"               alt="">
-    <img class="layer" id="b26-1"          src="assets/B26.1 Bad teeth guy feet dangling.png"    alt="">
-    <img class="layer" id="b27"            src="assets/B27 Door.png"                             alt="">
-    <img class="layer" id="b28"            src="assets/B28 Eyeball above Elue.png"               alt="">
-
-    <!-- Hit overlay — transparent divs positioned over interactive elements.
-         Press 'd' to make them visible for tuning. -->
-    <div id="hit-overlay"></div>
-
+    <img class="layer" id="bg"    src="assets/B29 Background.png"                    alt="Elue scene">
+    <img class="layer" id="b1"    src="assets/B1 Leafs.png"                          alt="">
+    <img class="layer" id="b2"    src="assets/B2 Boat.png"                           alt="">
+    <img class="layer" id="b3"    src="assets/B3 Water.png"                          alt="">
+    <img class="layer" id="b4"    src="assets/B4 Sun.png"                            alt="">
+    <img class="layer" id="b5"    src="assets/B5 Garbage pile.png"                   alt="">
+    <img class="layer" id="b6"    src="assets/B6 White bubbles in garbage.png"       alt="">
+    <img class="layer" id="b7"    src="assets/B7 About.png"                          alt="">
+    <img class="layer" id="b8"    src="assets/B8 Apartment windows.png"              alt="">
+    <img class="layer" id="b9"    src="assets/B9 Apartment door.png"                 alt="">
+    <img class="layer" id="b10"   src="assets/B10 Up top egg things.png"             alt="">
+    <img class="layer" id="b11"   src="assets/B11 Bird.png"                          alt="">
+    <img class="layer" id="b11-1" src="assets/B11.1 Bird.png"                        alt="">
+    <img class="layer" id="b12"   src="assets/B12 Eyes.png"                          alt="">
+    <img class="layer" id="b13"   src="assets/B13 Elue.png"                          alt="">
+    <img class="layer" id="b14"   src="assets/B14 Elue background birds.png"         alt="">
+    <img class="layer" id="b15"   src="assets/B15 Pull down leaf.png"                alt="">
+    <img class="layer" id="b16"   src="assets/B16 Metal pipe.png"                    alt="">
+    <img class="layer" id="b17"   src="assets/B17 Bird.png"                          alt="">
+    <img class="layer" id="b18"   src="assets/B18 Cat.png"                           alt="">
+    <img class="layer" id="b19"   src="assets/B19 Sidewalk.png"                      alt="">
+    <img class="layer" id="b20"   src="assets/B20 Contact.png"                       alt="">
+    <img class="layer" id="b21"   src="assets/B21 Guy with hair.png"                 alt="">
+    <img class="layer" id="b22"   src="assets/B22 Apartment.png"                     alt="">
+    <img class="layer" id="b23"   src="assets/B23 Big book.png"                      alt="">
+    <img class="layer" id="b24"   src="assets/B24 Window.png"                        alt="">
+    <img class="layer" id="b25"   src="assets/B25 Bad teeth guy.png"                 alt="">
+    <img class="layer" id="b26"   src="assets/B26 Bad teeth guy feet.png"            alt="">
+    <img class="layer" id="b26-1" src="assets/B26.1 Bad teeth guy feet dangling.png" alt="">
+    <img class="layer" id="b27"   src="assets/B27 Door.png"                          alt="">
+    <img class="layer" id="b28"   src="assets/B28 Eyeball above Elue.png"            alt="">
   </header>
 
-  <!-- Leaf pull cord — hangs when header is scrolled away -->
   <div id="leaf-pull" aria-label="Pull to reveal header">
     <div class="pull-string" id="pull-string"></div>
     <img class="pull-leaf" src="assets/B15 Pull down leaf.png" alt="">
     <span class="pull-hint">pull to open</span>
   </div>
 
-  <!-- ── Page content ── -->
   <main>
 
     <section id="work">
@@ -390,114 +346,272 @@
 
   <script>
   (function () {
-    /* ── Constants ── */
-    const CANVAS_W = 3161;
-    const CANVAS_H = 1124;
 
-    /* ── Refs ── */
+    /* ═══════════════════════════════════════════════════════
+       ALPHA HIT TESTING
+       Each interactive PNG is drawn onto a small offscreen
+       canvas (1/8 scale). On click/hover, we sample the pixel
+       at the mouse position. If alpha > threshold → hit.
+
+       This means hit detection perfectly follows your ink
+       lines — no manual boxes, ever.
+
+       HOW IT WORKS:
+       1. Mouse position → canvas coordinates (undoing the
+          object-fit:cover + object-position:bottom transform)
+       2. Sample each interactive layer's mask, top to bottom
+       3. First non-transparent pixel wins
+
+       TO ADD A NEW INTERACTIVE LAYER:
+       Add an entry to `interactiveLayers` with the img element
+       id and the action name. The mask builds automatically.
+    ═══════════════════════════════════════════════════════ */
+
+    const CANVAS_W  = 3161;
+    const CANVAS_H  = 1124;
+    const MASK_SCALE = 8;  // 1/8 res — accurate enough, low memory
+    const MASK_W    = Math.ceil(CANVAS_W / MASK_SCALE);
+    const MASK_H    = Math.ceil(CANVAS_H / MASK_SCALE);
+    const ALPHA_MIN = 15; // ignore near-transparent edge pixels
+
     const header   = document.getElementById('site-header');
-    const overlay  = document.getElementById('hit-overlay');
     const leafPull = document.getElementById('leaf-pull');
     const pullStr  = document.getElementById('pull-string');
     const body     = document.body;
 
-    /* ── State ── */
-    let boatClicks = 0;
-    let sunOn      = true, sunClicks = 0;
-    let windowGuys = 3;
-    let shoesOn    = true;
-    let doorKnocks = 0;
-
-    /* ════════════════════════════════════════
-       HIT REGIONS
-       x, y, w, h — fractions of the original canvas (0 to 1).
-       x=0 is left edge, y=0 is top edge of canvas.
-
-       The image is shown with top 1/6 cropped (object-position:bottom).
-       positionHits() converts these to screen pixels automatically.
-
-       TO TUNE: press 'd' to see coloured boxes.
-       Adjust x/y/w/h until each box sits over the right element.
-    ════════════════════════════════════════ */
-    const regions = [
-      { id: 'about',    x: 0.14, y: 0.55, w: 0.10, h: 0.30, cursor: 'pointer' },
-      { id: 'contact',  x: 0.57, y: 0.55, w: 0.12, h: 0.30, cursor: 'pointer' },
-      { id: 'pullleaf', x: 0.44, y: 0.00, w: 0.08, h: 0.45, cursor: 'grab'    },
-      { id: 'leaves',   x: 0.01, y: 0.40, w: 0.10, h: 0.50, cursor: 'pointer' },
-      { id: 'boat',     x: 0.10, y: 0.45, w: 0.10, h: 0.35, cursor: 'pointer' },
-      { id: 'water',    x: 0.06, y: 0.68, w: 0.20, h: 0.25, cursor: 'pointer' },
-      { id: 'sun',      x: 0.01, y: 0.02, w: 0.06, h: 0.18, cursor: 'pointer' },
-      { id: 'cat',      x: 0.62, y: 0.40, w: 0.08, h: 0.35, cursor: 'pointer' },
-      { id: 'guy',      x: 0.70, y: 0.22, w: 0.07, h: 0.42, cursor: 'pointer' },
-      { id: 'window',   x: 0.78, y: 0.28, w: 0.08, h: 0.38, cursor: 'pointer' },
-      { id: 'feet',     x: 0.84, y: 0.48, w: 0.08, h: 0.48, cursor: 'pointer' },
-      { id: 'door',     x: 0.92, y: 0.32, w: 0.06, h: 0.48, cursor: 'pointer' },
+    // Interactive layers — listed back to front (front = checked first)
+    // Add entries here as you build each interaction.
+    const interactiveLayers = [
+      { imgId: 'b20',   action: 'contact'  },
+      { imgId: 'b7',    action: 'about'    },
+      { imgId: 'b15',   action: 'pullleaf' },
+      { imgId: 'b18',   action: 'cat'      },
+      { imgId: 'b21',   action: 'guy'      },
+      { imgId: 'b24',   action: 'window'   },
+      { imgId: 'b26',   action: 'feet'     },
+      { imgId: 'b27',   action: 'door'     },
+      { imgId: 'b11',   action: 'bird'     },
+      { imgId: 'b2',    action: 'boat'     },
+      { imgId: 'b3',    action: 'water'    },
+      { imgId: 'b4',    action: 'sun'      },
+      { imgId: 'b1',    action: 'leaves'   },
     ];
 
-    /* ── Build hit divs ── */
-    regions.forEach(r => {
-      const div = document.createElement('div');
-      div.className    = 'hit';
-      div.dataset.id   = r.id;
-      div.style.cursor = r.cursor;
-      div.addEventListener('click',      () => onRegionClick(r.id));
-      div.addEventListener('mouseenter', () => onRegionEnter(r.id));
-      div.addEventListener('mouseleave', () => onRegionLeave(r.id));
-      // Pull leaf also handles drag
-      if (r.id === 'pullleaf') {
-        div.addEventListener('mousedown', e => { startDrag(e.clientY); e.preventDefault(); });
-        div.addEventListener('touchstart', e => { startDrag(e.touches[0].clientY); }, { passive: true });
+    // Build alpha masks — fires when each image loads
+    function buildMask(layer) {
+      const img = document.getElementById(layer.imgId);
+      if (!img) return;
+
+      function draw() {
+        try {
+          const c   = document.createElement('canvas');
+          c.width   = MASK_W;
+          c.height  = MASK_H;
+          const ctx = c.getContext('2d');
+          ctx.drawImage(img, 0, 0, MASK_W, MASK_H);
+          layer.maskCtx = ctx;
+        } catch (e) {
+          // CORS or other issue — layer will be skipped in hit test
+          console.warn('Could not build mask for', layer.imgId, e.message);
+        }
       }
-      overlay.appendChild(div);
-    });
 
-    /* ── Position hit divs (call on load + resize) ── */
-    function positionHits() {
-      const headerW  = header.offsetWidth;
-      const headerH  = header.offsetHeight;
-
-      // Image scales to fill width; height = natural height at that scale
-      const scale    = headerW / CANVAS_W;
-      const scaledH  = CANVAS_H * scale;
-
-      // object-position:bottom → top of canvas is above container top
-      const offsetY  = headerH - scaledH; // negative number
-
-      regions.forEach(r => {
-        const div  = overlay.querySelector(`[data-id="${r.id}"]`);
-        if (!div) return;
-
-        const x1   = r.x * headerW;
-        const y1   = r.y * scaledH + offsetY;
-        const x2   = (r.x + r.w) * headerW;
-        const y2   = (r.y + r.h) * scaledH + offsetY;
-
-        // Clamp to container bounds
-        const top  = Math.max(0, y1);
-        const bot  = Math.min(headerH, y2);
-
-        div.style.left   = x1 + 'px';
-        div.style.top    = top + 'px';
-        div.style.width  = (x2 - x1) + 'px';
-        div.style.height = Math.max(0, bot - top) + 'px';
-      });
+      if (img.complete && img.naturalWidth > 0) {
+        draw();
+      } else {
+        img.addEventListener('load', draw);
+      }
     }
 
-    positionHits();
-    window.addEventListener('resize', positionHits);
+    interactiveLayers.forEach(buildMask);
 
-    /* ── Debug mode — press 'd' ── */
-    document.addEventListener('keydown', e => {
-      if (e.key === 'd' || e.key === 'D') {
-        body.classList.toggle('debug');
-        console.log('%cDebug: ' + (body.classList.contains('debug') ? 'ON — red boxes = hit regions' : 'OFF'),
-          'color:' + (body.classList.contains('debug') ? 'green' : 'red') + ';font-weight:bold');
+    // Convert header mouse coords → original canvas coords
+    function screenToCanvas(mouseX, mouseY) {
+      const headerW = header.offsetWidth;
+      const headerH = header.offsetHeight;
+      const scale   = headerW / CANVAS_W;  // always scales by width
+      const scaledH = CANVAS_H * scale;
+      const offsetY = headerH - scaledH;   // negative → top of image above container
+
+      const cx = mouseX / headerW * CANVAS_W;
+      const cy = (mouseY - offsetY) / scaledH * CANVAS_H;
+      return { cx, cy };
+    }
+
+    // Sample a layer's mask at canvas coordinates
+    function sampleAlpha(layer, cx, cy) {
+      if (!layer.maskCtx) return 0;
+      const mx = Math.round(cx / MASK_SCALE);
+      const my = Math.round(cy / MASK_SCALE);
+      if (mx < 0 || mx >= MASK_W || my < 0 || my >= MASK_H) return 0;
+      return layer.maskCtx.getImageData(mx, my, 1, 1).data[3];
+    }
+
+    // Find the topmost hit layer at screen position
+    function hitTest(mouseX, mouseY) {
+      const { cx, cy } = screenToCanvas(mouseX, mouseY);
+      if (cx < 0 || cx > CANVAS_W || cy < 0 || cy > CANVAS_H) return null;
+      for (const layer of interactiveLayers) {
+        if (sampleAlpha(layer, cx, cy) > ALPHA_MIN) return layer;
+      }
+      return null;
+    }
+
+    /* ── Cursor tracking ── */
+    const pullActions = new Set(['pullleaf']);
+    const navActions  = new Set(['about', 'contact']);
+
+    header.addEventListener('mousemove', e => {
+      const rect = header.getBoundingClientRect();
+      const hit  = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+      if (!hit) {
+        header.style.cursor = 'default';
+      } else if (pullActions.has(hit.action)) {
+        header.style.cursor = 'grab';
+      } else {
+        header.style.cursor = 'pointer';
       }
     });
 
-    /* ════════════════════════════════════════
+    header.addEventListener('mouseleave', () => header.style.cursor = 'default');
+
+    /* ── Click handler ── */
+    header.addEventListener('click', e => {
+      const rect = header.getBoundingClientRect();
+      const hit  = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+      if (hit) {
+        console.log('Hit:', hit.action);
+        onAction(hit.action);
+      }
+    });
+
+    /* ── Mousedown for pull cord drag ── */
+    header.addEventListener('mousedown', e => {
+      const rect = header.getBoundingClientRect();
+      const hit  = hitTest(e.clientX - rect.left, e.clientY - rect.top);
+      if (hit && hit.action === 'pullleaf') {
+        startDrag(e.clientY);
+        e.preventDefault();
+      }
+    });
+
+    header.addEventListener('touchstart', e => {
+      const rect = header.getBoundingClientRect();
+      const hit  = hitTest(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
+      if (hit && hit.action === 'pullleaf') startDrag(e.touches[0].clientY);
+    }, { passive: true });
+
+
+    /* ═══════════════════════════════════════════════════════
+       ACTIONS
+       Each action is a stub. Wire up your animations here
+       once you've built them in Krita.
+       Sounds: add files to assets/sounds/ and uncomment.
+    ═══════════════════════════════════════════════════════ */
+
+    let boatClicks = 0, sunOn = true, sunClicks = 0;
+    let windowGuys = 3, shoesOn = true, doorKnocks = 0;
+
+    function g(id) { return document.getElementById(id); }
+
+    function onAction(action) {
+      switch (action) {
+
+        case 'about':
+          scrollTo('#about');
+          break;
+
+        case 'contact':
+          scrollTo('#contact');
+          break;
+
+        case 'leaves':
+          // play(sounds.leafRustleLoud);
+          // Your animation: swap/animate individual leaf PNGs
+          break;
+
+        case 'boat':
+          boatClicks++;
+          // play(sounds.sailorsYell);
+          if (boatClicks >= 5) {
+            const b = g('b2');
+            if (b) { b.style.transition = 'transform 1.5s, opacity 1.5s'; b.style.transform = 'translateY(30px)'; b.style.opacity = '0'; }
+          }
+          break;
+
+        case 'water':
+          // play(sounds.splash);
+          // Your animation
+          break;
+
+        case 'sun':
+          sunClicks++;
+          sunOn = !sunOn;
+          body.style.background = sunOn ? '' : '#1a1814';
+          body.style.color      = sunOn ? '' : '#c8c0b0';
+          const b4 = g('b4');
+          if (b4) b4.style.opacity = sunOn ? '1' : '0.25';
+          if (sunClicks >= 8 && b4) {
+            b4.style.transition = 'transform 1.2s, opacity 1.2s';
+            b4.style.transform  = 'translateY(200%) rotate(180deg)';
+            b4.style.opacity    = '0';
+          }
+          break;
+
+        case 'bird':
+          // play(sounds.birdSquawk);
+          // Your animation: open beak, eye follow
+          break;
+
+        case 'cat':
+          // play(sounds.catMeow);
+          // Your animation
+          break;
+
+        case 'guy':
+          // play(sounds.guyClick);
+          // Your animation: shake hair
+          break;
+
+        case 'window':
+          windowGuys = Math.max(0, windowGuys - 1);
+          // play(sounds.windowKnock);
+          // Your animation: remove one guy per click
+          break;
+
+        case 'feet':
+          if (shoesOn) {
+            shoesOn = false;
+            const b26 = g('b26'), b261 = g('b26-1');
+            if (b26)  { b26.style.transition  = 'opacity 0.3s'; b26.style.opacity  = '0'; }
+            if (b261) { b261.style.transition = 'opacity 0.3s'; b261.style.opacity = '1'; }
+            // play(sounds.shoePop);
+          } else {
+            // play(sounds.feetGiggle);
+          }
+          break;
+
+        case 'door':
+          doorKnocks++;
+          // play(sounds.doorKnock);
+          if (doorKnocks >= 3) {
+            doorKnocks = 0;
+            // Your animation: guy pops out
+          }
+          break;
+      }
+    }
+
+    function scrollTo(sel) {
+      const el = document.querySelector(sel);
+      if (!el) return;
+      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 20, behavior: 'smooth' });
+    }
+
+
+    /* ═══════════════════════════════════════════════════════
        SCROLL HIDE / SHOW
-    ════════════════════════════════════════ */
+    ═══════════════════════════════════════════════════════ */
     let lastScroll = 0, isHidden = false;
 
     function hideHeader() {
@@ -525,9 +639,10 @@
       lastScroll = s;
     }, { passive: true });
 
-    /* ════════════════════════════════════════
+
+    /* ═══════════════════════════════════════════════════════
        PULL CORD DRAG
-    ════════════════════════════════════════ */
+    ═══════════════════════════════════════════════════════ */
     const PULL_THRESHOLD = 80;
     let dragging = false, dragStart = 0, dragDelta = 0;
 
@@ -540,8 +655,8 @@
       if (!dragging) return;
       dragDelta = Math.max(0, y - dragStart);
       const base = window.innerHeight * 0.33 - 70;
-      pullStr.style.height = (base + dragDelta * 0.55) + 'px';
-      const pct = Math.min(dragDelta / PULL_THRESHOLD, 1);
+      pullStr.style.height    = Math.max(4, base + dragDelta * 0.55) + 'px';
+      const pct               = Math.min(dragDelta / PULL_THRESHOLD, 1);
       header.style.transform  = `translateY(${-(header.offsetHeight * (1 - pct))}px)`;
       header.style.transition = 'none';
     }
@@ -567,173 +682,43 @@
     window.addEventListener('mouseup',     endDrag);
     window.addEventListener('touchend',    endDrag);
 
-    /* ════════════════════════════════════════
-       REGION INTERACTIONS
-    ════════════════════════════════════════ */
-    function scrollToSection(sel) {
-      const el = document.querySelector(sel);
-      if (!el) return;
-      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 20, behavior: 'smooth' });
-    }
 
-    function get(id) { return document.getElementById(id); }
-
-    function flash(el, style, val, duration) {
-      if (!el) return;
-      const prev = el.style[style];
-      el.style[style] = val;
-      setTimeout(() => el.style[style] = prev, duration);
-    }
-
-    function onRegionEnter(id) {
-      // Hover effects — add sounds here when ready
-      // e.g. if (id === 'cat') play(sounds.catPurr);
-    }
-
-    function onRegionLeave(id) {}
-
-    function onRegionClick(id) {
-      console.log('Clicked:', id);
-      switch (id) {
-
-        case 'about':
-          scrollToSection('#about');
-          break;
-
-        case 'contact':
-          scrollToSection('#contact');
-          break;
-
-        case 'pullleaf':
-          // drag handled by mousedown — click does nothing extra
-          break;
-
-        case 'leaves':
-          flash(get('b1'), 'transform', 'rotate(-6deg) translate(-3px,3px)', 350);
-          // play(sounds.leafRustleLoud);
-          break;
-
-        case 'boat':
-          boatClicks++;
-          flash(get('b2'), 'filter', 'brightness(1.3)', 200);
-          if (boatClicks >= 5) {
-            const b2 = get('b2');
-            if (b2) {
-              b2.style.transition = 'transform 1.5s ease-in, opacity 1.5s';
-              b2.style.transform  = 'translateY(50px)';
-              b2.style.opacity    = '0';
-            }
-          }
-          // play(sounds.sailorsYell);
-          break;
-
-        case 'water':
-          const b3 = get('b3');
-          if (b3) {
-            b3.style.transition = 'transform 0.15s';
-            b3.style.transform  = 'scaleY(1.06)';
-            setTimeout(() => b3.style.transform = '', 200);
-          }
-          // play(sounds.splash);
-          break;
-
-        case 'sun':
-          sunClicks++;
-          sunOn = !sunOn;
-          body.style.background = sunOn ? '' : '#1a1814';
-          body.style.color      = sunOn ? '' : '#c8c0b0';
-          const b4 = get('b4');
-          if (b4) b4.style.opacity = sunOn ? '1' : '0.25';
-          if (sunClicks >= 8 && b4) {
-            b4.style.transition = 'transform 1.2s ease-in, opacity 1.2s';
-            b4.style.transform  = 'translateY(300%) rotate(180deg)';
-            b4.style.opacity    = '0';
-          }
-          break;
-
-        case 'cat':
-          flash(get('b18'), 'transform', 'scale(1.04)', 200);
-          // play(sounds.catMeow);
-          break;
-
-        case 'guy':
-          flash(get('b21'), 'transform', 'translateX(-4px) rotate(-2deg)', 200);
-          // play(sounds.guyClick);
-          break;
-
-        case 'window':
-          windowGuys--;
-          // play(sounds.windowKnock);
-          if (windowGuys <= 0) {
-            const b24 = get('b24');
-            if (b24) { b24.style.transition = 'opacity 0.6s'; b24.style.opacity = '0.15'; }
-          }
-          break;
-
-        case 'feet':
-          if (shoesOn) {
-            shoesOn = false;
-            const b26  = get('b26');
-            const b261 = get('b26-1');
-            if (b26)  { b26.style.transition = 'opacity 0.3s'; b26.style.opacity  = '0'; }
-            if (b261) { b261.style.transition = 'opacity 0.3s'; b261.style.opacity = '1'; }
-          } else {
-            flash(get('b26-1'), 'transform', 'rotate(6deg)', 250);
-          }
-          // play(shoesOn ? sounds.shoePop : sounds.feetGiggle);
-          break;
-
-        case 'door':
-          doorKnocks++;
-          flash(get('b27'), 'transform', 'translateX(3px)', 120);
-          if (doorKnocks >= 3) {
-            doorKnocks = 0;
-            flash(get('b27'), 'filter', 'brightness(1.6)', 700);
-          }
-          // play(sounds.doorKnock);
-          break;
-      }
-    }
-
-    /* ════════════════════════════════════════
+    /* ═══════════════════════════════════════════════════════
        IDLE ANIMATIONS
-    ════════════════════════════════════════ */
-    // Boat bob
-    const b2 = get('b2');
-    if (b2) b2.style.animation = 'bob 3s ease-in-out infinite';
+    ═══════════════════════════════════════════════════════ */
+    // Boat — very subtle 2px bob
+    const boat = g('b2');
+    if (boat) boat.style.animation = 'bob 4s ease-in-out infinite';
 
-    // Feet dangle (hidden until shoes pop off)
-    const b261 = get('b26-1');
+    // Feet — hidden until shoes pop off
+    const b261 = g('b26-1');
     if (b261) {
       b261.style.opacity         = '0';
-      b261.style.animation       = 'feetdangle 2s ease-in-out infinite';
+      b261.style.animation       = 'feetdangle 2.5s ease-in-out infinite';
       b261.style.transformOrigin = '50% 0%';
     }
 
-    /* ════════════════════════════════════════
-       INTERACTION REGISTRY
-       Console: ELUE.interactions()
-    ════════════════════════════════════════ */
+
+    /* ═══════════════════════════════════════════════════════
+       DEV TOOLS
+    ═══════════════════════════════════════════════════════ */
     window.ELUE = {
-      interactions: () => console.table([
-        { ref:'B1',    el:'Leaves',           status:'partial — click wobble, fall-off when sub-PNGs ready' },
-        { ref:'B2',    el:'Boat',             status:'partial — idle bob, sinks after 5 clicks'             },
-        { ref:'B3',    el:'Water',            status:'partial — splash on click'                            },
-        { ref:'B4',    el:'Sun',              status:'partial — toggle dark mode, falls after 8'            },
-        { ref:'B7',    el:'About (nav)',       status:'done'                                                 },
-        { ref:'B15',   el:'Pull cord',        status:'done'                                                 },
-        { ref:'B18',   el:'Cat',              status:'partial — click pulse, eye follow todo'               },
-        { ref:'B20',   el:'Contact (nav)',     status:'done'                                                 },
-        { ref:'B21',   el:'Guy with hair',    status:'partial — shake on click, voice lines todo'           },
-        { ref:'B24',   el:'Window guys',      status:'partial — disappear after 3 clicks'                  },
-        { ref:'B26',   el:'Feet',             status:'partial — shoes pop off'                             },
-        { ref:'B27',   el:'Door',             status:'partial — flash after 3 knocks'                      },
-        { ref:'Scroll',el:'Header hide/show', status:'done'                                                 },
-      ]),
-      debug: () => body.classList.toggle('debug'),
+      // Log what's under the cursor at any point
+      probe: (mouseX, mouseY) => {
+        const { cx, cy } = screenToCanvas(mouseX, mouseY);
+        console.log(`Canvas coords: ${cx.toFixed(0)}, ${cy.toFixed(0)}`);
+        interactiveLayers.forEach(l => {
+          const a = sampleAlpha(l, cx, cy);
+          if (a > 0) console.log(`  ${l.imgId} (${l.action}): alpha=${a}`);
+        });
+      },
+      // Show mask status
+      masks: () => interactiveLayers.forEach(l =>
+        console.log(l.action, l.maskCtx ? '✓ mask ready' : '✗ no mask')
+      ),
     };
 
-    console.log('%cElue site loaded. ELUE.interactions() for status. Press d for debug.', 'color:#7C5CBF;font-weight:bold');
+    console.log('%cElue loaded. ELUE.masks() to check hit detection status.', 'color:#7C5CBF;font-weight:bold');
 
   })();
   </script>
