@@ -32,7 +32,7 @@
       font-size: 15px;
       line-height: 1.7;
       overflow-x: hidden;
-      padding-top: var(--header-h);
+      padding-top: 42vh;
       transition: padding-top 0.5s ease;
     }
 
@@ -44,158 +44,52 @@
 
     /* ─────────────────────────────────────────
        HEADER — layered PNG system
-       B29 Background.png is the base.
-       All other elements sit on top, absolutely positioned
-       as percentages of the container.
-
-       TUNING POSITIONS:
-       Open in browser, right-click any element → Inspect,
-       adjust left/top/width until it overlaps the background correctly.
-       Update the CSS variable for that element here.
+       All PNGs exported from the same 3161×1124 Krita canvas.
+       Every layer sits at left:0, top:0, width:100%, height:100%
+       — transparent areas handle positioning automatically.
+       object-fit:cover + object-position:top crops the bottom
+       (plain ground) while keeping the creature/scene visible.
     ───────────────────────────────────────── */
     #site-header {
       position: fixed;
       top: 0; left: 0; right: 0;
       z-index: 200;
-      height: var(--header-h);
-      /* No overflow hidden — elements can spill slightly if needed */
+      /* Shorter than full canvas ratio — crops bottom ground area.
+         object-fit:cover on all layers keeps them aligned. */
+      height: 42vh;
+      overflow: hidden;
       transform: translateY(0);
       transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
     }
 
     #site-header.hidden { transform: translateY(-100%); }
 
-    /* Every layer shares this base */
-    .layer {
+    /* All layers — background and elements — share this base.
+       Since they're all from the same canvas they crop identically. */
+    #bg,
+    .scene-el {
       position: absolute;
-      /* default — override per element */
       left: 0; top: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none; /* individual elements re-enable as needed */
-    }
-
-    /* Background — full bleed base layer */
-    #bg {
-      width: 100%;
-      height: 100%;
       object-fit: cover;
-      object-position: center top;
-      display: block;
-      position: absolute;
-      top: 0; left: 0;
-      filter: contrast(1.05);
-    }
-
-    /* ── Element positioning ──
-       Format: left / top / width (all as % of header container)
-       Height is auto to preserve PNG aspect ratio unless specified.
-
-       ⚠ ALL VALUES ARE PLACEHOLDERS — tune in browser. ⚠ */
-
-    /* B1 — Leafs (left side cluster) */
-    #b1-leafs      { left: 1%;  top: 30%; width: 12%; }
-
-    /* B2 — Boat */
-    #b2-boat       { left: 15%; top: 55%; width: 10%; }
-
-    /* B3 — Water */
-    #b3-water      { left: 10%; top: 65%; width: 25%; }
-
-    /* B4 — Sun */
-    #b4-sun        { left: 5%;  top: 5%;  width: 8%; }
-
-    /* B5 — Garbage pile */
-    #b5-garbage    { left: 20%; top: 60%; width: 8%; }
-
-    /* B6 — White bubbles in garbage */
-    #b6-bubbles    { left: 21%; top: 58%; width: 6%; }
-
-    /* B7 — About label */
-    #b7-about      { left: 17%; top: 45%; width: 10%; cursor: pointer; pointer-events: all; }
-
-    /* B8 — Apartment windows */
-    #b8-windows    { left: 30%; top: 20%; width: 15%; }
-
-    /* B9 — Apartment door */
-    #b9-door       { left: 32%; top: 45%; width: 5%; cursor: pointer; pointer-events: all; }
-
-    /* B10 — Egg things (top) */
-    #b10-eggs      { left: 38%; top: 2%;  width: 12%; }
-
-    /* B11 — Bird (center, near Elue) */
-    #b11-bird      { left: 40%; top: 25%; width: 10%; }
-
-    /* B12 — Eyes */
-    #b12-eyes      { left: 42%; top: 35%; width: 14%; }
-
-    /* B13 — Elue text */
-    #b13-elue      { left: 36%; top: 38%; width: 22%; }
-
-    /* B14 — Background birds (near Elue) */
-    #b14-birds     { left: 30%; top: 8%;  width: 18%; }
-
-    /* B15 — Pull-down leaf (the draw cord) */
-    #b15-pullleaf  { left: 48%; top: 0%;  width: 4%; cursor: grab; pointer-events: all; }
-    #b15-pullleaf.grabbing { cursor: grabbing; }
-
-    /* B16 — Metal pipe */
-    #b16-pipe      { left: 60%; top: 30%; width: 4%; }
-
-    /* B17 — Bird (right of center) */
-    #b17-bird2     { left: 62%; top: 15%; width: 8%; }
-
-    /* B18 — Cat */
-    #b18-cat       { left: 65%; top: 40%; width: 8%; cursor: pointer; pointer-events: all; }
-
-    /* B19 — Sidewalk */
-    #b19-sidewalk  { left: 55%; top: 70%; width: 30%; }
-
-    /* B20 — Contact label */
-    #b20-contact   { left: 58%; top: 45%; width: 11%; cursor: pointer; pointer-events: all; }
-
-    /* B21 — Guy with hair */
-    #b21-guy       { left: 70%; top: 30%; width: 8%; cursor: pointer; pointer-events: all; }
-
-    /* B22 — Apartment (right side) */
-    #b22-apartment { left: 72%; top: 5%;  width: 16%; }
-
-    /* B23 — Big book */
-    #b23-book      { left: 75%; top: 50%; width: 12%; }
-
-    /* B24 — Window with guys */
-    #b24-window    { left: 80%; top: 35%; width: 10%; cursor: pointer; pointer-events: all; }
-
-    /* B25 — Bad teeth guy */
-    #b25-badteeth  { left: 86%; top: 45%; width: 8%; }
-
-    /* B26 — Bad teeth guy feet */
-    #b26-feet      { left: 87%; top: 65%; width: 6%; cursor: pointer; pointer-events: all; }
-
-    /* B26.1 — Feet dangling (separated moving part) */
-    #b261-dangle   { left: 87%; top: 70%; width: 5%; }
-
-    /* B27 — Door (far right) */
-    #b27-door2     { left: 93%; top: 40%; width: 5%; cursor: pointer; pointer-events: all; }
-
-    /* B28 — Eyeball above Elue */
-    #b28-eyeball   { left: 44%; top: 18%; width: 6%; }
-
-    /* ── Positioned img helper ──
-       All layered elements use this to sit correctly */
-    .scene-el {
-      position: absolute;
-      height: auto;
-      pointer-events: none; /* re-enabled per element above */
+      object-position: top center;
+      pointer-events: none;
       user-select: none;
       -webkit-user-drag: none;
     }
 
-    /* Clickable / interactive elements get a subtle cursor signal */
+    #bg { filter: contrast(1.05); }
+
+    /* Interactive elements */
     .scene-el.interactive {
       pointer-events: all;
       cursor: pointer;
     }
+
+    /* B15 pull leaf — grab cursor */
+    #b15-pullleaf          { cursor: grab; pointer-events: all; }
+    #b15-pullleaf.grabbing { cursor: grabbing; }
 
 
     /* ─────────────────────────────────────────
@@ -226,7 +120,8 @@
 
     .pull-string {
       width: 1px;
-      height: 32px;
+      /* String reaches ~1/3 down screen minus leaf + hint height */
+      height: calc(33vh - 70px);
       background: var(--ink);
       opacity: 0.4;
     }
@@ -717,7 +612,7 @@
     const pullStr  = el('pull-string');
     const body     = document.body;
 
-    const HEADER_H      = header.offsetHeight;
+    const HEADER_H      = header.offsetHeight; // matches 42vh in CSS
     const PULL_THRESHOLD = 80;
 
     /* Sounds — add files to assets/sounds/ and uncomment
@@ -804,11 +699,12 @@
     function onDragMove(y) {
       if (!dragging) return;
       dragDelta = Math.max(0, y - dragStart);
-      pullStr.style.height = (32 + dragDelta * 0.55) + 'px';
+      // Extend string during drag — base is 33vh-70px, add drag distance
+      const baseH = window.innerHeight * 0.33 - 70;
+      pullStr.style.height = (baseH + dragDelta * 0.55) + 'px';
       const pct = Math.min(dragDelta / PULL_THRESHOLD, 1);
       header.style.transform  = `translateY(${-(header.offsetHeight * (1 - pct))}px)`;
       header.style.transition = 'none';
-      // play(sounds.pullCord);
     }
 
     function onDragEnd() {
@@ -816,7 +712,8 @@
       dragging = false;
       leafPull.classList.remove('grabbing');
       el('b15-pullleaf') && el('b15-pullleaf').classList.remove('grabbing');
-      pullStr.style.height   = '32px';
+      // Reset string to CSS value
+      pullStr.style.height   = '';
       header.style.transition = '';
       if (dragDelta >= PULL_THRESHOLD) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
