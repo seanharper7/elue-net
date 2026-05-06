@@ -6,21 +6,14 @@
   <title>Elue</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
-
   <style>
-    /* ─────────────────────────────────────────
-       VARIABLES
-       Canvas is 3161 × 1124px.
-       Header height is always exactly that ratio.
-    ───────────────────────────────────────── */
     :root {
       --paper:  #F0EBE0;
       --ink:    #0D0B08;
       --purple: #7C5CBF;
-
-      /* Crop top 1/6, show bottom 5/6 of canvas.
-         Formula: full_natural_height × 5/6
-         = (100vw × 1124/3161) × 5/6              */
+      /* Canvas is 3161×1124. Show bottom 5/6 (crop top 1/6).
+         Header height = full_natural_height × 5/6
+                       = (100vw × 1124/3161) × 5/6             */
       --header-h: calc(100vw * 1124 / 3161 * 5 / 6);
     }
 
@@ -37,21 +30,12 @@
       padding-top: var(--header-h);
       transition: padding-top 0.5s ease;
     }
-
     body.header-hidden { padding-top: 0; }
 
     a { color: inherit; text-decoration: none; }
     img { display: block; max-width: 100%; }
 
-
-    /* ─────────────────────────────────────────
-       HEADER — layered PNG system
-       All PNGs exported from the same 3161×1124 Krita canvas.
-       Every layer sits at left:0, top:0, width:100%, height:100%
-       — transparent areas handle positioning automatically.
-       object-fit:cover + object-position:top crops the bottom
-       (plain ground) while keeping the creature/scene visible.
-    ───────────────────────────────────────── */
+    /* ── Header ── */
     #site-header {
       position: fixed;
       top: 0; left: 0; right: 0;
@@ -61,48 +45,57 @@
       transform: translateY(0);
       transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
     }
-
     #site-header.hidden { transform: translateY(-100%); }
 
-    /* All layers share this. object-position:bottom crops top 1/6. */
-    #bg,
-    .scene-el {
+    /* All PNGs are from the same 3161×1124 canvas.
+       object-fit:cover + object-position:bottom → top 1/6 cropped. */
+    .layer {
       position: absolute;
       left: 0; top: 0;
-      width: 100%;
-      height: 100%;
+      width: 100%; height: 100%;
       object-fit: cover;
       object-position: bottom center;
       pointer-events: none;
       user-select: none;
       -webkit-user-drag: none;
     }
-
     #bg { filter: contrast(1.05); }
-    .scene-el { pointer-events: none; }
 
-    /* Debug overlay — press 'd' to toggle */
-    #debug-canvas {
+    /* ── Hit overlay ──
+       Positioned divs over interactive elements.
+       Transparent normally. Debug mode makes them visible.
+       Press 'd' to toggle. */
+    #hit-overlay {
       position: absolute;
       top: 0; left: 0;
       width: 100%; height: 100%;
       pointer-events: none;
-      z-index: 999;
-      display: none;
+      z-index: 100;
+    }
+    .hit {
+      position: absolute;
+      pointer-events: all;
+      background: transparent;
+    }
+    /* Debug mode — press 'd' */
+    body.debug .hit {
+      background: rgba(255, 0, 0, 0.25);
+      border: 1.5px solid red;
+      font-size: 10px;
+      font-family: monospace;
+      color: #000;
+      padding: 2px;
+    }
+    body.debug .hit::before {
+      content: attr(data-id);
+      display: block;
+      font-weight: bold;
     }
 
-
-    /* ─────────────────────────────────────────
-       LEAF PULL CORD
-       Appears when header is hidden.
-       B15 Pull down leaf.png IS the cord visual —
-       no separate SVG needed once that PNG is in place.
-    ───────────────────────────────────────── */
+    /* ── Leaf pull cord ── */
     #leaf-pull {
       position: fixed;
-      top: 0;
-      /* Matches B15 left position — update both if you move the leaf */
-      left: 50%;
+      top: 0; left: 50%;
       transform: translateX(-50%);
       z-index: 300;
       display: flex;
@@ -114,31 +107,24 @@
       pointer-events: none;
       transition: opacity 0.4s ease;
     }
-
     #leaf-pull.visible  { opacity: 1; pointer-events: all; }
     #leaf-pull.grabbing { cursor: grabbing; }
 
     .pull-string {
       width: 1px;
-      /* String reaches ~1/3 down screen minus leaf + hint height */
       height: calc(33vh - 70px);
       background: var(--ink);
       opacity: 0.4;
     }
-
-    /* Uses B15 PNG once available; SVG fallback until then */
-    #pull-leaf-img {
-      width: 48px;
-      height: auto;
+    .pull-leaf {
+      width: 48px; height: auto;
       animation: sway 3s ease-in-out infinite;
       transform-origin: 50% 0%;
     }
-
     @keyframes sway {
       0%,100% { transform: rotate(-7deg); }
       50%      { transform: rotate(7deg); }
     }
-
     .pull-hint {
       font-size: 0.58rem;
       letter-spacing: 0.15em;
@@ -148,22 +134,27 @@
       white-space: nowrap;
       animation: fadepulse 4s ease-in-out infinite;
     }
-
     @keyframes fadepulse {
       0%,100% { opacity: 0.1; }
       50%      { opacity: 0.3; }
     }
 
+    /* ── Idle animations (injected by JS) ── */
+    @keyframes bob {
+      0%,100% { transform: translateY(0) rotate(0deg); }
+      50%      { transform: translateY(-5px) rotate(1deg); }
+    }
+    @keyframes feetdangle {
+      0%,100% { transform: rotate(-4deg); }
+      50%      { transform: rotate(4deg); }
+    }
 
-    /* ─────────────────────────────────────────
-       MAIN CONTENT
-    ───────────────────────────────────────── */
+    /* ── Main content ── */
     main {
       max-width: 860px;
       margin: 0 auto;
       padding: 4rem 2.5rem 2rem;
     }
-
     .section-label {
       font-size: 0.68rem;
       letter-spacing: 0.25em;
@@ -174,7 +165,6 @@
       align-items: center;
       gap: 1rem;
     }
-
     .section-label::after {
       content: '';
       flex: 1;
@@ -183,113 +173,33 @@
       opacity: 0.3;
     }
 
-    /* ── Work ── */
+    /* Work */
     #work { margin-bottom: 6rem; }
-
     .project {
       padding: 2.5rem 0;
       border-top: 1px solid rgba(13,11,8,0.1);
     }
     .project:last-child { border-bottom: 1px solid rgba(13,11,8,0.1); }
-
-    .project-number {
-      font-size: 0.6rem;
-      letter-spacing: 0.2em;
-      opacity: 0.28;
-      margin-bottom: 0.5rem;
-    }
-
-    .project-title {
-      font-size: 1.75rem;
-      font-weight: 700;
-      line-height: 1.1;
-      margin-bottom: 0.3rem;
-    }
-
-    .project-sub {
-      font-size: 0.7rem;
-      opacity: 0.38;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      margin-bottom: 1rem;
-    }
-
-    .project-desc {
-      font-size: 0.87rem;
-      opacity: 0.62;
-      max-width: 52ch;
-      margin-bottom: 1rem;
-    }
-
-    .project-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.35rem;
-      margin-bottom: 1rem;
-    }
-
-    .tag {
-      font-size: 0.6rem;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      border: 1px solid rgba(13,11,8,0.18);
-      padding: 0.18rem 0.45rem;
-    }
-
-    .project-link {
-      font-size: 0.7rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      border-bottom: 1px solid currentColor;
-      padding-bottom: 1px;
-      opacity: 0.48;
-      transition: opacity 0.2s, color 0.2s;
-    }
+    .project-number { font-size: 0.6rem; letter-spacing: 0.2em; opacity: 0.28; margin-bottom: 0.5rem; }
+    .project-title  { font-size: 1.75rem; font-weight: 700; line-height: 1.1; margin-bottom: 0.3rem; }
+    .project-sub    { font-size: 0.7rem; opacity: 0.38; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
+    .project-desc   { font-size: 0.87rem; opacity: 0.62; max-width: 52ch; margin-bottom: 1rem; }
+    .project-tags   { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1rem; }
+    .tag { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid rgba(13,11,8,0.18); padding: 0.18rem 0.45rem; }
+    .project-link { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; border-bottom: 1px solid currentColor; padding-bottom: 1px; opacity: 0.48; transition: opacity 0.2s, color 0.2s; }
     .project-link:hover { opacity: 1; color: var(--purple); }
-
     .project-soon { font-size: 0.7rem; opacity: 0.22; font-style: italic; }
 
-    /* ── About ── */
+    /* About */
     #about { margin-bottom: 6rem; }
-
-    .about-text p {
-      font-size: 0.87rem;
-      opacity: 0.62;
-      max-width: 52ch;
-      margin-bottom: 1rem;
-    }
-
+    .about-text p { font-size: 0.87rem; opacity: 0.62; max-width: 52ch; margin-bottom: 1rem; }
     .credits-block { margin-top: 2.5rem; }
-
-    .credits-block h3 {
-      font-size: 0.62rem;
-      letter-spacing: 0.2em;
-      text-transform: uppercase;
-      opacity: 0.32;
-      margin-bottom: 0.8rem;
-    }
-
+    .credits-block h3 { font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.32; margin-bottom: 0.8rem; }
     .credit-list { list-style: none; }
+    .credit-list li { font-size: 0.78rem; padding: 0.45rem 0; border-bottom: 1px solid rgba(13,11,8,0.07); display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+    .credit-role { font-size: 0.62rem; opacity: 0.32; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
 
-    .credit-list li {
-      font-size: 0.78rem;
-      padding: 0.45rem 0;
-      border-bottom: 1px solid rgba(13,11,8,0.07);
-      display: flex;
-      justify-content: space-between;
-      gap: 1rem;
-      align-items: baseline;
-    }
-
-    .credit-role {
-      font-size: 0.62rem;
-      opacity: 0.32;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      white-space: nowrap;
-    }
-
-    /* ── Contact ── */
+    /* Contact */
     #contact {
       background: var(--ink);
       color: var(--paper);
@@ -300,184 +210,75 @@
       gap: 4rem;
       align-items: end;
     }
-
-    .contact-heading {
-      font-size: clamp(2.5rem,6vw,5rem);
-      font-weight: 700;
-      font-style: italic;
-      line-height: 1.0;
-      margin-bottom: 2rem;
-    }
-
-    .contact-email {
-      font-size: 0.88rem;
-      border-bottom: 1px solid rgba(242,237,226,0.28);
-      padding-bottom: 2px;
-      transition: color 0.2s;
-    }
+    .contact-heading { font-size: clamp(2.5rem,6vw,5rem); font-weight: 700; font-style: italic; line-height: 1.0; margin-bottom: 2rem; }
+    .contact-email { font-size: 0.88rem; border-bottom: 1px solid rgba(242,237,226,0.28); padding-bottom: 2px; transition: color 0.2s; }
     .contact-email:hover { color: #A68AD0; }
-
-    .social-links {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 1rem;
-    }
-
-    .social-link {
-      font-size: 0.7rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      opacity: 0.38;
-      transition: opacity 0.2s, color 0.2s;
-    }
+    .social-links { display: flex; flex-direction: column; align-items: flex-end; gap: 1rem; }
+    .social-link { font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.38; transition: opacity 0.2s, color 0.2s; }
     .social-link:hover { opacity: 1; color: #A68AD0; }
-
-    .footer-bar {
-      grid-column: 1/-1;
-      border-top: 1px solid rgba(242,237,226,0.08);
-      padding-top: 1.8rem;
-      font-size: 0.6rem;
-      opacity: 0.18;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      display: flex;
-      justify-content: space-between;
-    }
+    .footer-bar { grid-column: 1/-1; border-top: 1px solid rgba(242,237,226,0.08); padding-top: 1.8rem; font-size: 0.6rem; opacity: 0.18; letter-spacing: 0.1em; text-transform: uppercase; display: flex; justify-content: space-between; }
 
     @media (max-width: 700px) {
       main { padding: 3rem 1.5rem 2rem; }
-      #contact {
-        grid-template-columns: 1fr;
-        margin: 0 -1.5rem;
-        padding: 4rem 1.5rem;
-      }
+      #contact { grid-template-columns: 1fr; margin: 0 -1.5rem; padding: 4rem 1.5rem; }
       .social-links { align-items: flex-start; }
     }
   </style>
 </head>
 <body>
 
-  <!-- ─────────────────────────────────────────
-       HEADER — layered scene
-       Add each PNG as it's exported from Krita.
-       Tune position in CSS above (left/top/width).
-  ───────────────────────────────────────── -->
+  <!-- ── Header — layered PNG scene ── -->
   <header id="site-header">
 
-    <!-- B29 — Background (base layer, always first) -->
-    <img id="bg" src="assets/B29 Background.png"
-         alt="Elue hand-drawn scene — creatures, city, apartment buildings">
+    <!-- B29 — Background base layer (always first) -->
+    <img class="layer" id="bg"             src="assets/B29 Background.png"                       alt="Elue scene">
 
-    <!-- Debug overlay — press 'd' in browser to toggle hit region visualization -->
-    <canvas id="debug-canvas"></canvas>
+    <!-- Scene layers — all from same 3161×1124 canvas, overlay perfectly -->
+    <img class="layer" id="b1"             src="assets/B1 Leafs.png"                             alt="">
+    <img class="layer" id="b2"             src="assets/B2 Boat.png"                              alt="">
+    <img class="layer" id="b3"             src="assets/B3 Water.png"                             alt="">
+    <img class="layer" id="b4"             src="assets/B4 Sun.png"                               alt="">
+    <img class="layer" id="b5"             src="assets/B5 Garbage pile.png"                      alt="">
+    <img class="layer" id="b6"             src="assets/B6 White bubbles in garbage.png"          alt="">
+    <img class="layer" id="b7"             src="assets/B7 About.png"                             alt="">
+    <img class="layer" id="b8"             src="assets/B8 Apartment windows.png"                 alt="">
+    <img class="layer" id="b9"             src="assets/B9 Apartment door.png"                    alt="">
+    <img class="layer" id="b10"            src="assets/B10 Up top egg things.png"                alt="">
+    <img class="layer" id="b11"            src="assets/B11 Bird.png"                             alt="">
+    <img class="layer" id="b11-1"          src="assets/B11.1 Bird.png"                           alt="">
+    <img class="layer" id="b12"            src="assets/B12 Eyes.png"                             alt="">
+    <img class="layer" id="b13"            src="assets/B13 Elue.png"                             alt="">
+    <img class="layer" id="b14"            src="assets/B14 Elue background birds.png"            alt="">
+    <img class="layer" id="b15"            src="assets/B15 Pull down leaf.png"                   alt="">
+    <img class="layer" id="b16"            src="assets/B16 Metal pipe.png"                       alt="">
+    <img class="layer" id="b17"            src="assets/B17 Bird.png"                             alt="">
+    <img class="layer" id="b18"            src="assets/B18 Cat.png"                              alt="">
+    <img class="layer" id="b19"            src="assets/B19 Sidewalk.png"                         alt="">
+    <img class="layer" id="b20"            src="assets/B20 Contact.png"                          alt="">
+    <img class="layer" id="b21"            src="assets/B21 Guy with hair.png"                    alt="">
+    <img class="layer" id="b22"            src="assets/B22 Apartment.png"                        alt="">
+    <img class="layer" id="b23"            src="assets/B23 Big book.png"                         alt="">
+    <img class="layer" id="b24"            src="assets/B24 Window.png"                           alt="">
+    <img class="layer" id="b25"            src="assets/B25 Bad teeth guy.png"                    alt="">
+    <img class="layer" id="b26"            src="assets/B26 Bad teeth guy feet.png"               alt="">
+    <img class="layer" id="b26-1"          src="assets/B26.1 Bad teeth guy feet dangling.png"    alt="">
+    <img class="layer" id="b27"            src="assets/B27 Door.png"                             alt="">
+    <img class="layer" id="b28"            src="assets/B28 Eyeball above Elue.png"               alt="">
 
-    <!-- B1 — Leafs -->
-    <img id="b1-leafs"     class="scene-el" src="assets/B1 Leafs.png"      alt="">
-
-    <!-- B2 — Boat -->
-    <img id="b2-boat"      class="scene-el" src="assets/B2 Boat.png"       alt="">
-
-    <!-- B3 — Water -->
-    <img id="b3-water"     class="scene-el" src="assets/B3 Water.png"      alt="">
-
-    <!-- B4 — Sun -->
-    <img id="b4-sun"       class="scene-el" src="assets/B4 Sun.png"        alt="">
-
-    <!-- B5 — Garbage pile -->
-    <img id="b5-garbage"   class="scene-el" src="assets/B5 Garbage pile.png" alt="">
-
-    <!-- B6 — White bubbles in garbage -->
-    <img id="b6-bubbles"   class="scene-el" src="assets/B6 White bubbles in garbage.png" alt="">
-
-    <!-- B7 — About label (clickable nav) -->
-    <img id="b7-about"     class="scene-el interactive" src="assets/B7 About.png" alt="About">
-
-    <!-- B8 — Apartment windows -->
-    <img id="b8-windows"   class="scene-el" src="assets/B8 Apartment windows.png" alt="">
-
-    <!-- B9 — Apartment door -->
-    <img id="b9-door"      class="scene-el interactive" src="assets/B9 Apartment door.png" alt="">
-
-    <!-- B10 — Egg things -->
-    <img id="b10-eggs"     class="scene-el" src="assets/B10 Up top egg things.png" alt="">
-
-    <!-- B11 — Bird center -->
-    <img id="b11-bird"     class="scene-el" src="assets/B11 Bird.png"      alt="">
-
-    <!-- B12 — Eyes -->
-    <img id="b12-eyes"     class="scene-el" src="assets/B12 Eyes.png"      alt="">
-
-    <!-- B13 — Elue text -->
-    <img id="b13-elue"     class="scene-el" src="assets/B13 Elue.png"      alt="Elue">
-
-    <!-- B14 — Background birds -->
-    <img id="b14-birds"    class="scene-el" src="assets/B14 Elue background birds.png" alt="">
-
-    <!-- B15 — Pull-down leaf (also used as pull cord — see JS) -->
-    <img id="b15-pullleaf" class="scene-el interactive" src="assets/B15 Pull down leaf.png" alt="">
-
-    <!-- B16 — Metal pipe -->
-    <img id="b16-pipe"     class="scene-el" src="assets/B16 Metal pipe.png" alt="">
-
-    <!-- B17 — Bird right -->
-    <img id="b17-bird2"    class="scene-el" src="assets/B17 Bird.png"      alt="">
-
-    <!-- B18 — Cat -->
-    <img id="b18-cat"      class="scene-el interactive" src="assets/B18 Cat.png" alt="">
-
-    <!-- B19 — Sidewalk -->
-    <img id="b19-sidewalk" class="scene-el" src="assets/B19 Sidewalk.png"  alt="">
-
-    <!-- B20 — Contact label (clickable nav) -->
-    <img id="b20-contact"  class="scene-el interactive" src="assets/B20 Contact.png" alt="Contact">
-
-    <!-- B21 — Guy with hair -->
-    <img id="b21-guy"      class="scene-el interactive" src="assets/B21 Guy with hair.png" alt="">
-
-    <!-- B22 — Apartment right -->
-    <img id="b22-apartment" class="scene-el" src="assets/B22 Apartment.png" alt="">
-
-    <!-- B23 — Big book -->
-    <img id="b23-book"     class="scene-el" src="assets/B23 Big book.png"  alt="">
-
-    <!-- B24 — Window with guys -->
-    <img id="b24-window"   class="scene-el interactive" src="assets/B24 Window.png" alt="">
-
-    <!-- B25 — Bad teeth guy -->
-    <img id="b25-badteeth" class="scene-el" src="assets/B25 Bad teeth guy.png" alt="">
-
-    <!-- B26 — Bad teeth guy feet (base) -->
-    <img id="b26-feet"     class="scene-el interactive" src="assets/B26 Bad teeth guy feet.png" alt="">
-
-    <!-- B26.1 — Feet dangling (separated moving part) -->
-    <img id="b261-dangle"  class="scene-el" src="assets/B26.1 Bad teeth guy feet dangling.png" alt="">
-
-    <!-- B27 — Door far right -->
-    <img id="b27-door2"    class="scene-el interactive" src="assets/B27 Door.png" alt="">
-
-    <!-- B28 — Eyeball above Elue -->
-    <img id="b28-eyeball"  class="scene-el" src="assets/B28 Eyeball above Elue.png" alt="">
+    <!-- Hit overlay — transparent divs positioned over interactive elements.
+         Press 'd' to make them visible for tuning. -->
+    <div id="hit-overlay"></div>
 
   </header>
 
-
-  <!-- ─────────────────────────────────────────
-       LEAF PULL CORD
-       Hangs at top when header is hidden.
-       Uses B15 PNG as the visual leaf.
-  ───────────────────────────────────────── -->
+  <!-- Leaf pull cord — hangs when header is scrolled away -->
   <div id="leaf-pull" aria-label="Pull to reveal header">
     <div class="pull-string" id="pull-string"></div>
-    <!-- B15 PNG used here too — same leaf, consistent visual -->
-    <img id="pull-leaf-img" src="assets/B15 Pull down leaf.png" alt="">
+    <img class="pull-leaf" src="assets/B15 Pull down leaf.png" alt="">
     <span class="pull-hint">pull to open</span>
   </div>
 
-
-  <!-- ─────────────────────────────────────────
-       PAGE CONTENT
-  ───────────────────────────────────────── -->
+  <!-- ── Page content ── -->
   <main>
 
     <section id="work">
@@ -556,18 +357,12 @@
         <div class="credits-block">
           <h3>Credits</h3>
           <ul class="credit-list">
-            <li>Snooze Quest — Victoria Vincent / Adult Swim
-              <span class="credit-role">Score · Sound design</span></li>
-            <li>Praise God, The Mouse Is Dead! — Trevor Mac
-              <span class="credit-role">Score · Sound design</span></li>
-            <li>Dream Journal — Rachel Walton
-              <span class="credit-role">Production · Recording</span></li>
-            <li>Long Sword — Malcolm Guglich
-              <span class="credit-role">Production · Piano</span></li>
-            <li>GIRAF21 Indie Mixtape — Quickdraw Animation
-              <span class="credit-role">Scoring</span></li>
-            <li>Portrait of The Issue — Naima
-              <span class="credit-role">Co-writing · Production · Piano</span></li>
+            <li>Snooze Quest — Victoria Vincent / Adult Swim <span class="credit-role">Score · Sound design</span></li>
+            <li>Praise God, The Mouse Is Dead! — Trevor Mac  <span class="credit-role">Score · Sound design</span></li>
+            <li>Dream Journal — Rachel Walton               <span class="credit-role">Production · Recording</span></li>
+            <li>Long Sword — Malcolm Guglich                <span class="credit-role">Production · Piano</span></li>
+            <li>GIRAF21 Indie Mixtape — Quickdraw           <span class="credit-role">Scoring</span></li>
+            <li>Portrait of The Issue — Naima               <span class="credit-role">Co-writing · Production · Piano</span></li>
           </ul>
         </div>
       </div>
@@ -576,9 +371,7 @@
     <section id="contact">
       <div class="contact-left">
         <h2 class="contact-heading">Let's<br>make<br>something.</h2>
-        <a class="contact-email" href="mailto:elueelephant@gmail.com">
-          elueelephant@gmail.com
-        </a>
+        <a class="contact-email" href="mailto:elueelephant@gmail.com">elueelephant@gmail.com</a>
       </div>
       <div class="contact-right">
         <div class="social-links">
@@ -595,73 +388,112 @@
 
   </main>
 
-
-  <!-- ─────────────────────────────────────────
-       JAVASCRIPT
-       Interactions are grouped by element.
-       Each section is clearly labelled with its B# ref.
-       Add sound by dropping .mp3/.ogg files in assets/sounds/
-       and un-commenting the Audio lines.
-  ───────────────────────────────────────── */
   <script>
-  (function() {
+  (function () {
+    /* ── Constants ── */
+    const CANVAS_W = 3161;
+    const CANVAS_H = 1124;
 
-    /* ── Utility ── */
-    const el  = id => document.getElementById(id);
-    const qs  = s  => document.querySelector(s);
-
-    const header   = el('site-header');
-    const leafPull = el('leaf-pull');
-    const pullStr  = el('pull-string');
+    /* ── Refs ── */
+    const header   = document.getElementById('site-header');
+    const overlay  = document.getElementById('hit-overlay');
+    const leafPull = document.getElementById('leaf-pull');
+    const pullStr  = document.getElementById('pull-string');
     const body     = document.body;
 
-    const HEADER_H      = header.offsetHeight; // matches 42vh in CSS
-    const PULL_THRESHOLD = 80;
+    /* ── State ── */
+    let boatClicks = 0;
+    let sunOn      = true, sunClicks = 0;
+    let windowGuys = 3;
+    let shoesOn    = true;
+    let doorKnocks = 0;
 
-    // State
-    let boatClicks  = 0;
-    let sunOn       = true, sunClicks = 0;
-    let catClicks   = 0;
-    let windowGuys  = 3;
-    let shoesOn     = true;
-    let doorKnocks  = 0;
+    /* ════════════════════════════════════════
+       HIT REGIONS
+       x, y, w, h — fractions of the original canvas (0 to 1).
+       x=0 is left edge, y=0 is top edge of canvas.
 
-    /* Sounds — add files to assets/sounds/ and uncomment
-    const sounds = {
-      leafRustleLight:  new Audio('assets/sounds/leaf-rustle-light.mp3'),
-      leafRustleLoud:   new Audio('assets/sounds/leaf-rustle-loud.mp3'),
-      pullCord:         new Audio('assets/sounds/pull-cord.mp3'),
-      shipAmbience:     new Audio('assets/sounds/ship-ambience.mp3'),
-      sailorsYell:      new Audio('assets/sounds/sailors-yell.mp3'),
-      splash:           new Audio('assets/sounds/splash.mp3'),
-      catPurr:          new Audio('assets/sounds/cat-purr.mp3'),
-      catMeow:          new Audio('assets/sounds/cat-meow.mp3'),
-      birdSquawk:       new Audio('assets/sounds/bird-squawk.mp3'),
-      eyeSquish:        new Audio('assets/sounds/eye-squish.mp3'),
-      pipeclang:        new Audio('assets/sounds/pipe-clang.mp3'),
-      eggPercuss:       new Audio('assets/sounds/egg-percuss.mp3'),
-      bookFlutter:      new Audio('assets/sounds/book-flutter.mp3'),
-      windowGiggle:     new Audio('assets/sounds/window-giggle.mp3'),
-      windowKnock:      new Audio('assets/sounds/window-knock.mp3'),
-      doorKnock:        new Audio('assets/sounds/door-knock.mp3'),
-      footsteps:        new Audio('assets/sounds/footsteps.mp3'),
-      shoePop:          new Audio('assets/sounds/shoe-pop.mp3'),
-      feetGiggle:       new Audio('assets/sounds/feet-giggle.mp3'),
-      guyHover: [
-        new Audio('assets/sounds/guy-what-are-you-doing.mp3'),
-        new Audio('assets/sounds/guy-do-you-mind.mp3'),
-        new Audio('assets/sounds/guy-could-you-stop.mp3'),
-        new Audio('assets/sounds/guy-knock-that-off.mp3'),
-      ],
-      guyClick: [
-        new Audio('assets/sounds/guy-hey.mp3'),
-        new Audio('assets/sounds/guy-quit-it.mp3'),
-        new Audio('assets/sounds/guy-get-away.mp3'),
-      ],
-    };
-    function play(s) { s.currentTime = 0; s.play().catch(()=>{}); }
-    */
+       The image is shown with top 1/6 cropped (object-position:bottom).
+       positionHits() converts these to screen pixels automatically.
 
+       TO TUNE: press 'd' to see coloured boxes.
+       Adjust x/y/w/h until each box sits over the right element.
+    ════════════════════════════════════════ */
+    const regions = [
+      { id: 'about',    x: 0.14, y: 0.55, w: 0.10, h: 0.30, cursor: 'pointer' },
+      { id: 'contact',  x: 0.57, y: 0.55, w: 0.12, h: 0.30, cursor: 'pointer' },
+      { id: 'pullleaf', x: 0.44, y: 0.00, w: 0.08, h: 0.45, cursor: 'grab'    },
+      { id: 'leaves',   x: 0.01, y: 0.40, w: 0.10, h: 0.50, cursor: 'pointer' },
+      { id: 'boat',     x: 0.10, y: 0.45, w: 0.10, h: 0.35, cursor: 'pointer' },
+      { id: 'water',    x: 0.06, y: 0.68, w: 0.20, h: 0.25, cursor: 'pointer' },
+      { id: 'sun',      x: 0.01, y: 0.02, w: 0.06, h: 0.18, cursor: 'pointer' },
+      { id: 'cat',      x: 0.62, y: 0.40, w: 0.08, h: 0.35, cursor: 'pointer' },
+      { id: 'guy',      x: 0.70, y: 0.22, w: 0.07, h: 0.42, cursor: 'pointer' },
+      { id: 'window',   x: 0.78, y: 0.28, w: 0.08, h: 0.38, cursor: 'pointer' },
+      { id: 'feet',     x: 0.84, y: 0.48, w: 0.08, h: 0.48, cursor: 'pointer' },
+      { id: 'door',     x: 0.92, y: 0.32, w: 0.06, h: 0.48, cursor: 'pointer' },
+    ];
+
+    /* ── Build hit divs ── */
+    regions.forEach(r => {
+      const div = document.createElement('div');
+      div.className    = 'hit';
+      div.dataset.id   = r.id;
+      div.style.cursor = r.cursor;
+      div.addEventListener('click',      () => onRegionClick(r.id));
+      div.addEventListener('mouseenter', () => onRegionEnter(r.id));
+      div.addEventListener('mouseleave', () => onRegionLeave(r.id));
+      // Pull leaf also handles drag
+      if (r.id === 'pullleaf') {
+        div.addEventListener('mousedown', e => { startDrag(e.clientY); e.preventDefault(); });
+        div.addEventListener('touchstart', e => { startDrag(e.touches[0].clientY); }, { passive: true });
+      }
+      overlay.appendChild(div);
+    });
+
+    /* ── Position hit divs (call on load + resize) ── */
+    function positionHits() {
+      const headerW  = header.offsetWidth;
+      const headerH  = header.offsetHeight;
+
+      // Image scales to fill width; height = natural height at that scale
+      const scale    = headerW / CANVAS_W;
+      const scaledH  = CANVAS_H * scale;
+
+      // object-position:bottom → top of canvas is above container top
+      const offsetY  = headerH - scaledH; // negative number
+
+      regions.forEach(r => {
+        const div  = overlay.querySelector(`[data-id="${r.id}"]`);
+        if (!div) return;
+
+        const x1   = r.x * headerW;
+        const y1   = r.y * scaledH + offsetY;
+        const x2   = (r.x + r.w) * headerW;
+        const y2   = (r.y + r.h) * scaledH + offsetY;
+
+        // Clamp to container bounds
+        const top  = Math.max(0, y1);
+        const bot  = Math.min(headerH, y2);
+
+        div.style.left   = x1 + 'px';
+        div.style.top    = top + 'px';
+        div.style.width  = (x2 - x1) + 'px';
+        div.style.height = Math.max(0, bot - top) + 'px';
+      });
+    }
+
+    positionHits();
+    window.addEventListener('resize', positionHits);
+
+    /* ── Debug mode — press 'd' ── */
+    document.addEventListener('keydown', e => {
+      if (e.key === 'd' || e.key === 'D') {
+        body.classList.toggle('debug');
+        console.log('%cDebug: ' + (body.classList.contains('debug') ? 'ON — red boxes = hit regions' : 'OFF'),
+          'color:' + (body.classList.contains('debug') ? 'green' : 'red') + ';font-weight:bold');
+      }
+    });
 
     /* ════════════════════════════════════════
        SCROLL HIDE / SHOW
@@ -693,38 +525,32 @@
       lastScroll = s;
     }, { passive: true });
 
-
     /* ════════════════════════════════════════
-       B15 — PULL-DOWN LEAF (draw cord mechanic)
-       Dragging down more than PULL_THRESHOLD
-       snaps the header open.
+       PULL CORD DRAG
     ════════════════════════════════════════ */
+    const PULL_THRESHOLD = 80;
     let dragging = false, dragStart = 0, dragDelta = 0;
 
-    function onDragStart(y) {
+    function startDrag(y) {
       dragging = true; dragStart = y; dragDelta = 0;
       leafPull.classList.add('grabbing');
-      el('b15-pullleaf') && el('b15-pullleaf').classList.add('grabbing');
     }
 
-    function onDragMove(y) {
+    function moveDrag(y) {
       if (!dragging) return;
       dragDelta = Math.max(0, y - dragStart);
-      // Extend string during drag — base is 33vh-70px, add drag distance
-      const baseH = window.innerHeight * 0.33 - 70;
-      pullStr.style.height = (baseH + dragDelta * 0.55) + 'px';
+      const base = window.innerHeight * 0.33 - 70;
+      pullStr.style.height = (base + dragDelta * 0.55) + 'px';
       const pct = Math.min(dragDelta / PULL_THRESHOLD, 1);
       header.style.transform  = `translateY(${-(header.offsetHeight * (1 - pct))}px)`;
       header.style.transition = 'none';
     }
 
-    function onDragEnd() {
+    function endDrag() {
       if (!dragging) return;
       dragging = false;
       leafPull.classList.remove('grabbing');
-      el('b15-pullleaf') && el('b15-pullleaf').classList.remove('grabbing');
-      // Reset string to CSS value
-      pullStr.style.height   = '';
+      pullStr.style.height    = '';
       header.style.transition = '';
       if (dragDelta >= PULL_THRESHOLD) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -734,221 +560,81 @@
       }
     }
 
-    leafPull.addEventListener('mousedown',  e => { onDragStart(e.clientY); e.preventDefault(); });
-    leafPull.addEventListener('touchstart', e => { onDragStart(e.touches[0].clientY); }, { passive: true });
-
-    // B15 in-scene also triggers the pull cord
-    const b15 = el('b15-pullleaf');
-    if (b15) {
-      b15.addEventListener('mousedown',  e => { onDragStart(e.clientY); e.preventDefault(); });
-      b15.addEventListener('touchstart', e => { onDragStart(e.touches[0].clientY); }, { passive: true });
-    }
-
-    window.addEventListener('mousemove', e => onDragMove(e.clientY));
-    window.addEventListener('touchmove', e => onDragMove(e.touches[0].clientY), { passive: true });
-    window.addEventListener('mouseup',   onDragEnd);
-    window.addEventListener('touchend',  onDragEnd);
-
+    leafPull.addEventListener('mousedown',  e => { startDrag(e.clientY); e.preventDefault(); });
+    leafPull.addEventListener('touchstart', e => { startDrag(e.touches[0].clientY); }, { passive: true });
+    window.addEventListener('mousemove',   e => moveDrag(e.clientY));
+    window.addEventListener('touchmove',   e => moveDrag(e.touches[0].clientY), { passive: true });
+    window.addEventListener('mouseup',     endDrag);
+    window.addEventListener('touchend',    endDrag);
 
     /* ════════════════════════════════════════
-       UNIFIED HIT REGION SYSTEM
-       Because all PNGs are full-size overlays, pointer events
-       on individual elements don't work — the topmost layer
-       catches everything. Instead we use a single listener on
-       the header and check which named region was hit.
-
-       Regions are defined as fractions of the ORIGINAL canvas
-       (3161 × 1124). The browser scales/crops with object-fit:cover
-       + object-position:bottom, so we account for that offset.
-
-       TO ADJUST A REGION:
-       Change the x/y/w/h values. All are 0–1 fractions of canvas.
-       x=left edge, y=top edge, w=width, h=height.
-
-       Regions are checked top-to-bottom — first match wins.
+       REGION INTERACTIONS
     ════════════════════════════════════════ */
-
-    const CANVAS_W = 3161;
-    const CANVAS_H = 1124;
-
-    // Regions — tune these after viewing in browser
-    // Format: { id, x, y, w, h, cursor }
-    const hitRegions = [
-      { id: 'about',    x: 0.14, y: 0.55, w: 0.10, h: 0.30, cursor: 'pointer' },
-      { id: 'contact',  x: 0.57, y: 0.55, w: 0.12, h: 0.30, cursor: 'pointer' },
-      { id: 'pullleaf', x: 0.44, y: 0.00, w: 0.08, h: 0.40, cursor: 'grab'    },
-      { id: 'cat',      x: 0.62, y: 0.40, w: 0.08, h: 0.35, cursor: 'pointer' },
-      { id: 'guy',      x: 0.70, y: 0.25, w: 0.07, h: 0.40, cursor: 'pointer' },
-      { id: 'window',   x: 0.78, y: 0.30, w: 0.08, h: 0.35, cursor: 'pointer' },
-      { id: 'feet',     x: 0.84, y: 0.50, w: 0.07, h: 0.45, cursor: 'pointer' },
-      { id: 'door',     x: 0.91, y: 0.35, w: 0.06, h: 0.45, cursor: 'pointer' },
-      { id: 'boat',     x: 0.12, y: 0.45, w: 0.10, h: 0.30, cursor: 'pointer' },
-      { id: 'water',    x: 0.06, y: 0.65, w: 0.22, h: 0.25, cursor: 'pointer' },
-      { id: 'sun',      x: 0.01, y: 0.02, w: 0.06, h: 0.20, cursor: 'pointer' },
-    ];
-
-    // Convert canvas-fraction coords to screen coords.
-    // Container = 5/6 of natural height, object-position:bottom.
-    // Image always scales by width for this aspect ratio.
-    function canvasToScreen(cx, cy) {
-      const rect    = header.getBoundingClientRect();
-      const screenW = rect.width;
-      const screenH = rect.height;
-
-      // Scale by width (image is wide, always fits by width)
-      const scale   = screenW / CANVAS_W;
-      const scaledH = CANVAS_H * scale;
-
-      // object-position:bottom → bottom edges align, top is cropped
-      const offsetY = screenH - scaledH; // negative — top of image above container
-
-      return {
-        x: cx * screenW,
-        y: cy * scaledH + offsetY,
-      };
+    function scrollToSection(sel) {
+      const el = document.querySelector(sel);
+      if (!el) return;
+      window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 20, behavior: 'smooth' });
     }
 
-    function getHitRegion(mouseX, mouseY) {
-      for (const r of hitRegions) {
-        const tl = canvasToScreen(r.x,       r.y);
-        const br = canvasToScreen(r.x + r.w, r.y + r.h);
-        if (mouseX >= tl.x && mouseX <= br.x &&
-            mouseY >= tl.y && mouseY <= br.y) {
-          return r;
-        }
-      }
-      return null;
+    function get(id) { return document.getElementById(id); }
+
+    function flash(el, style, val, duration) {
+      if (!el) return;
+      const prev = el.style[style];
+      el.style[style] = val;
+      setTimeout(() => el.style[style] = prev, duration);
     }
 
-    /* ── Debug overlay ──
-       Press 'd' to toggle colored boxes over hit regions.
-       Use this to tune x/y/w/h values in hitRegions. */
-    const debugCanvas = el('debug-canvas');
-    const debugCtx    = debugCanvas.getContext('2d');
-    let   debugOn     = false;
-
-    function resizeDebug() {
-      debugCanvas.width  = header.offsetWidth;
-      debugCanvas.height = header.offsetHeight;
-    }
-    resizeDebug();
-    window.addEventListener('resize', resizeDebug);
-
-    const debugColors = ['#ff000088','#00cc0088','#0066ff88','#ffcc0088',
-                         '#ff00ff88','#00cccc88','#ff880088','#88ff0088',
-                         '#ffffff88','#ff444488','#44ff4488','#4444ff88'];
-
-    function drawDebug() {
-      debugCtx.clearRect(0, 0, debugCanvas.width, debugCanvas.height);
-      if (!debugOn) return;
-      hitRegions.forEach((r, i) => {
-        const tl = canvasToScreen(r.x,       r.y);
-        const br = canvasToScreen(r.x + r.w, r.y + r.h);
-        debugCtx.fillStyle   = debugColors[i % debugColors.length];
-        debugCtx.strokeStyle = '#000';
-        debugCtx.lineWidth   = 1.5;
-        debugCtx.fillRect  (tl.x, tl.y, br.x - tl.x, br.y - tl.y);
-        debugCtx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
-        debugCtx.fillStyle = '#000';
-        debugCtx.font      = 'bold 12px monospace';
-        debugCtx.fillText(r.id, tl.x + 4, tl.y + 16);
-      });
+    function onRegionEnter(id) {
+      // Hover effects — add sounds here when ready
+      // e.g. if (id === 'cat') play(sounds.catPurr);
     }
 
-    document.addEventListener('keydown', e => {
-      if (e.key === 'd' || e.key === 'D') {
-        debugOn = !debugOn;
-        debugCanvas.style.display = debugOn ? 'block' : 'none';
-        drawDebug();
-        console.log('%cHit region debug: ' + (debugOn ? 'ON — coloured boxes show region positions' : 'OFF'),
-          'color: ' + (debugOn ? 'green' : 'red') + '; font-weight: bold');
-      }
-    });
+    function onRegionLeave(id) {}
 
-    // Cursor + hover tracking
-    header.addEventListener('mousemove', e => {
-      const rect = header.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      const region = getHitRegion(mx, my);
-      header.style.cursor = region ? region.cursor : 'default';
-      onHeaderHover(region, mx, my);
-    });
-
-    header.addEventListener('mouseleave', () => {
-      header.style.cursor = 'default';
-    });
-
-    header.addEventListener('click', e => {
-      const rect   = header.getBoundingClientRect();
-      const mx     = e.clientX - rect.left;
-      const my     = e.clientY - rect.top;
-      const region = getHitRegion(mx, my);
-      console.log('Header click:', region ? region.id : 'no region hit', `(${mx.toFixed(0)}, ${my.toFixed(0)})`);
-      if (region) onHeaderClick(region);
-    });
-
-    // Mousedown on header for pull cord drag
-    header.addEventListener('mousedown', e => {
-      const rect   = header.getBoundingClientRect();
-      const region = getHitRegion(e.clientX - rect.left, e.clientY - rect.top);
-      if (region && region.id === 'pullleaf') {
-        onDragStart(e.clientY);
-        e.preventDefault();
-      }
-    });
-
-    header.addEventListener('touchstart', e => {
-      const rect   = header.getBoundingClientRect();
-      const tx     = e.touches[0].clientX - rect.left;
-      const ty     = e.touches[0].clientY - rect.top;
-      const region = getHitRegion(tx, ty);
-      if (region && region.id === 'pullleaf') {
-        onDragStart(e.touches[0].clientY);
-      }
-    }, { passive: true });
-
-    /* ── Hover handler ── */
-    function onHeaderHover(region, mx, my) {
-      if (!region) return;
-      // Add hover effects here as you build them
-      // e.g. if (region.id === 'cat') { ... }
-    }
-
-    /* ── Click handler ── */
-    function onHeaderClick(region) {
-      switch(region.id) {
+    function onRegionClick(id) {
+      console.log('Clicked:', id);
+      switch (id) {
 
         case 'about':
-          scrollTo('#about');
+          scrollToSection('#about');
           break;
 
         case 'contact':
-          scrollTo('#contact');
+          scrollToSection('#contact');
           break;
 
         case 'pullleaf':
-          // Drag handled by mousedown above
+          // drag handled by mousedown — click does nothing extra
+          break;
+
+        case 'leaves':
+          flash(get('b1'), 'transform', 'rotate(-6deg) translate(-3px,3px)', 350);
+          // play(sounds.leafRustleLoud);
           break;
 
         case 'boat':
           boatClicks++;
-          // play(sounds.sailorsYell);
+          flash(get('b2'), 'filter', 'brightness(1.3)', 200);
           if (boatClicks >= 5) {
-            el('b2-boat').style.transition = 'transform 1.5s ease-in, opacity 1.5s';
-            el('b2-boat').style.transform  = 'translateY(40px)';
-            el('b2-boat').style.opacity    = '0';
+            const b2 = get('b2');
+            if (b2) {
+              b2.style.transition = 'transform 1.5s ease-in, opacity 1.5s';
+              b2.style.transform  = 'translateY(50px)';
+              b2.style.opacity    = '0';
+            }
           }
+          // play(sounds.sailorsYell);
           break;
 
         case 'water':
-          el('b3-water') && (() => {
-            const w = el('b3-water');
-            w.style.transition = 'transform 0.15s';
-            w.style.transform  = 'scaleY(1.06)';
-            setTimeout(() => w.style.transform = '', 200);
-            // play(sounds.splash);
-          })();
+          const b3 = get('b3');
+          if (b3) {
+            b3.style.transition = 'transform 0.15s';
+            b3.style.transform  = 'scaleY(1.06)';
+            setTimeout(() => b3.style.transform = '', 200);
+          }
+          // play(sounds.splash);
           break;
 
         case 'sun':
@@ -956,144 +642,98 @@
           sunOn = !sunOn;
           body.style.background = sunOn ? '' : '#1a1814';
           body.style.color      = sunOn ? '' : '#c8c0b0';
-          el('b4-sun') && (el('b4-sun').style.opacity = sunOn ? '1' : '0.3');
-          if (sunClicks >= 8 && el('b4-sun')) {
-            el('b4-sun').style.transition = 'transform 1.2s ease-in, opacity 1.2s';
-            el('b4-sun').style.transform  = 'translateY(200%) rotate(180deg)';
-            el('b4-sun').style.opacity    = '0';
+          const b4 = get('b4');
+          if (b4) b4.style.opacity = sunOn ? '1' : '0.25';
+          if (sunClicks >= 8 && b4) {
+            b4.style.transition = 'transform 1.2s ease-in, opacity 1.2s';
+            b4.style.transform  = 'translateY(300%) rotate(180deg)';
+            b4.style.opacity    = '0';
           }
           break;
 
         case 'cat':
-          catClicks++;
+          flash(get('b18'), 'transform', 'scale(1.04)', 200);
           // play(sounds.catMeow);
-          el('b18-cat') && (() => {
-            const c = el('b18-cat');
-            c.style.transition = 'transform 0.1s';
-            c.style.transform  = 'scale(1.04)';
-            setTimeout(() => c.style.transform = '', 200);
-          })();
           break;
 
         case 'guy':
-          el('b21-guy') && (() => {
-            const g = el('b21-guy');
-            g.style.transition = 'transform 0.1s';
-            g.style.transform  = 'translateX(-3px) rotate(-2deg)';
-            setTimeout(() => g.style.transform = '', 200);
-            // play(sounds.guyClick[clickIdx++ % sounds.guyClick.length]);
-          })();
+          flash(get('b21'), 'transform', 'translateX(-4px) rotate(-2deg)', 200);
+          // play(sounds.guyClick);
           break;
 
         case 'window':
           windowGuys--;
           // play(sounds.windowKnock);
-          if (windowGuys <= 0 && el('b24-window')) {
-            el('b24-window').style.transition = 'opacity 0.5s';
-            el('b24-window').style.opacity    = '0.2';
+          if (windowGuys <= 0) {
+            const b24 = get('b24');
+            if (b24) { b24.style.transition = 'opacity 0.6s'; b24.style.opacity = '0.15'; }
           }
           break;
 
         case 'feet':
           if (shoesOn) {
             shoesOn = false;
-            el('b26-feet')  && (el('b26-feet').style.opacity  = '0');
-            el('b261-dangle') && (el('b261-dangle').style.opacity = '1');
-            // play(sounds.shoePop);
+            const b26  = get('b26');
+            const b261 = get('b26-1');
+            if (b26)  { b26.style.transition = 'opacity 0.3s'; b26.style.opacity  = '0'; }
+            if (b261) { b261.style.transition = 'opacity 0.3s'; b261.style.opacity = '1'; }
           } else {
-            // play(sounds.feetGiggle);
+            flash(get('b26-1'), 'transform', 'rotate(6deg)', 250);
           }
+          // play(shoesOn ? sounds.shoePop : sounds.feetGiggle);
           break;
 
         case 'door':
           doorKnocks++;
-          // play(sounds.doorKnock);
+          flash(get('b27'), 'transform', 'translateX(3px)', 120);
           if (doorKnocks >= 3) {
             doorKnocks = 0;
-            el('b27-door2') && (() => {
-              const d = el('b27-door2');
-              d.style.filter = 'brightness(1.5)';
-              setTimeout(() => d.style.filter = '', 600);
-            })();
+            flash(get('b27'), 'filter', 'brightness(1.6)', 700);
           }
+          // play(sounds.doorKnock);
           break;
       }
     }
 
-    /* ── Nav scroll ── */
-    function scrollTo(selector) {
-      const target = document.querySelector(selector);
-      if (!target) return;
-      window.scrollTo({
-        top: target.getBoundingClientRect().top + window.scrollY - 20,
-        behavior: 'smooth'
-      });
-    }
-
-
     /* ════════════════════════════════════════
-       B26.1 — FEET IDLE SWAY
+       IDLE ANIMATIONS
     ════════════════════════════════════════ */
-    const b261 = el('b261-dangle');
+    // Boat bob
+    const b2 = get('b2');
+    if (b2) b2.style.animation = 'bob 3s ease-in-out infinite';
+
+    // Feet dangle (hidden until shoes pop off)
+    const b261 = get('b26-1');
     if (b261) {
       b261.style.opacity         = '0';
       b261.style.animation       = 'feetdangle 2s ease-in-out infinite';
       b261.style.transformOrigin = '50% 0%';
-      const swayStyle = document.createElement('style');
-      swayStyle.textContent = `
-        @keyframes feetdangle {
-          0%,100% { transform: rotate(-4deg); }
-          50%      { transform: rotate(4deg); }
-        }
-        @keyframes bob {
-          0%,100% { transform: translateY(0px) rotate(0deg); }
-          50%      { transform: translateY(-4px) rotate(1deg); }
-        }
-      `;
-      document.head.appendChild(swayStyle);
     }
-
-    const b2 = el('b2-boat');
-    if (b2) b2.style.animation = 'bob 3s ease-in-out infinite';
-
 
     /* ════════════════════════════════════════
        INTERACTION REGISTRY
-       Browser console: ELUE.interactions()
+       Console: ELUE.interactions()
     ════════════════════════════════════════ */
     window.ELUE = {
-      interactions: () => {
-        console.table([
-          { ref:'B1',   el:'Leafs',                  hover:'rustle (stub)',    click:'fall off (todo)',      status:'partial' },
-          { ref:'B2',   el:'Boat',                   hover:'ship ambience',    click:'sink after 5',         status:'partial' },
-          { ref:'B3',   el:'Water',                  hover:'—',               click:'splash',               status:'partial' },
-          { ref:'B4',   el:'Sun',                    hover:'—',               click:'toggle light/dark',    status:'partial' },
-          { ref:'B6',   el:'Bubbles',                hover:'—',               click:'pop + disappear',      status:'done'    },
-          { ref:'B7',   el:'About (nav)',             hover:'—',               click:'scroll to About',      status:'done'    },
-          { ref:'B9',   el:'Apartment door',          hover:'—',               click:'knock',                status:'planned' },
-          { ref:'B10',  el:'Eggs',                   hover:'—',               click:'shake + tone',         status:'planned' },
-          { ref:'B11',  el:'Bird center',             hover:'—',               click:'squawk + eye follow',  status:'planned' },
-          { ref:'B12',  el:'Eyes',                   hover:'—',               click:'blink + follow',       status:'planned' },
-          { ref:'B14',  el:'Background birds',        hover:'—',               click:'flap + disappear',     status:'planned' },
-          { ref:'B15',  el:'Pull-down leaf (cord)',   hover:'rustle',          click:'reveal header',        status:'done'    },
-          { ref:'B16',  el:'Metal pipe',              hover:'—',               click:'clang + vibrate',      status:'planned' },
-          { ref:'B17',  el:'Bird right',              hover:'—',               click:'squawk + eye follow',  status:'planned' },
-          { ref:'B18',  el:'Cat',                    hover:'purr / eye close', click:'meow + eye follow',   status:'partial' },
-          { ref:'B20',  el:'Contact (nav)',           hover:'—',               click:'scroll to Contact',    status:'done'    },
-          { ref:'B21',  el:'Guy with hair',           hover:'voice lines',     click:'shake + voice',        status:'partial' },
-          { ref:'B22',  el:'Apartment right',         hover:'ambience',        click:'lights off + scream',  status:'planned' },
-          { ref:'B23',  el:'Big book',                hover:'page flutter',    click:'—',                   status:'planned' },
-          { ref:'B24',  el:'Window with guys',        hover:'giggle',          click:'guys disappear',       status:'partial' },
-          { ref:'B25',  el:'Bad teeth guy',           hover:'mumble',          click:'voice lines',          status:'planned' },
-          { ref:'B26',  el:'Bad teeth guy feet',      hover:'footsteps',       click:'shoes pop off',        status:'partial' },
-          { ref:'B26.1',el:'Feet dangling',           hover:'dangle',          click:'giggle',               status:'partial' },
-          { ref:'B27',  el:'Door far right',          hover:'—',               click:'3 knocks → guy pops', status:'partial' },
-          { ref:'B28',  el:'Eyeball above Elue',      hover:'—',               click:'—',                   status:'planned' },
-          { ref:'Scroll',el:'Header hide/show',       hover:'—',               click:'—',                   status:'done'    },
-          { ref:'Pull',  el:'Leaf pull cord',         hover:'—',               click:'drag to reveal',       status:'done'    },
-        ]);
-      }
+      interactions: () => console.table([
+        { ref:'B1',    el:'Leaves',           status:'partial — click wobble, fall-off when sub-PNGs ready' },
+        { ref:'B2',    el:'Boat',             status:'partial — idle bob, sinks after 5 clicks'             },
+        { ref:'B3',    el:'Water',            status:'partial — splash on click'                            },
+        { ref:'B4',    el:'Sun',              status:'partial — toggle dark mode, falls after 8'            },
+        { ref:'B7',    el:'About (nav)',       status:'done'                                                 },
+        { ref:'B15',   el:'Pull cord',        status:'done'                                                 },
+        { ref:'B18',   el:'Cat',              status:'partial — click pulse, eye follow todo'               },
+        { ref:'B20',   el:'Contact (nav)',     status:'done'                                                 },
+        { ref:'B21',   el:'Guy with hair',    status:'partial — shake on click, voice lines todo'           },
+        { ref:'B24',   el:'Window guys',      status:'partial — disappear after 3 clicks'                  },
+        { ref:'B26',   el:'Feet',             status:'partial — shoes pop off'                             },
+        { ref:'B27',   el:'Door',             status:'partial — flash after 3 knocks'                      },
+        { ref:'Scroll',el:'Header hide/show', status:'done'                                                 },
+      ]),
+      debug: () => body.classList.toggle('debug'),
     };
+
+    console.log('%cElue site loaded. ELUE.interactions() for status. Press d for debug.', 'color:#7C5CBF;font-weight:bold');
 
   })();
   </script>
