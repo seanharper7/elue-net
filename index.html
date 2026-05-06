@@ -18,8 +18,10 @@
       --ink:    #0D0B08;
       --purple: #7C5CBF;
 
-      /* Header height derived from canvas aspect ratio */
-      --header-h: calc(100vw * (1124 / 3161));
+      /* Crop top 1/6, show bottom 5/6 of canvas.
+         Formula: full_natural_height × 5/6
+         = (100vw × 1124/3161) × 5/6              */
+      --header-h: calc(100vw * 1124 / 3161 * 5 / 6);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32,7 +34,7 @@
       font-size: 15px;
       line-height: 1.7;
       overflow-x: hidden;
-      padding-top: 42vh;
+      padding-top: var(--header-h);
       transition: padding-top 0.5s ease;
     }
 
@@ -54,9 +56,7 @@
       position: fixed;
       top: 0; left: 0; right: 0;
       z-index: 200;
-      /* Shorter than full canvas ratio — crops bottom ground area.
-         object-fit:cover on all layers keeps them aligned. */
-      height: 42vh;
+      height: var(--header-h);
       overflow: hidden;
       transform: translateY(0);
       transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
@@ -64,9 +64,7 @@
 
     #site-header.hidden { transform: translateY(-100%); }
 
-    /* All layers — background and elements — share this base.
-       Since they're all from the same canvas they crop identically.
-       object-position: bottom = show bottom of drawing, crop top sky. */
+    /* All layers share this. object-position:bottom crops top 1/6. */
     #bg,
     .scene-el {
       position: absolute;
@@ -81,10 +79,17 @@
     }
 
     #bg { filter: contrast(1.05); }
-
-    /* No pointer-events on any scene-el — interaction handled
-       by a single JS listener on the header using hit regions */
     .scene-el { pointer-events: none; }
+
+    /* Debug overlay — press 'd' to toggle */
+    #debug-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 999;
+      display: none;
+    }
 
 
     /* ─────────────────────────────────────────
@@ -363,6 +368,9 @@
     <!-- B29 — Background (base layer, always first) -->
     <img id="bg" src="assets/B29 Background.png"
          alt="Elue hand-drawn scene — creatures, city, apartment buildings">
+
+    <!-- Debug overlay — press 'd' in browser to toggle hit region visualization -->
+    <canvas id="debug-canvas"></canvas>
 
     <!-- B1 — Leafs -->
     <img id="b1-leafs"     class="scene-el" src="assets/B1 Leafs.png"      alt="">
@@ -779,24 +787,23 @@
       { id: 'sun',      x: 0.01, y: 0.02, w: 0.06, h: 0.20, cursor: 'pointer' },
     ];
 
-    // Convert canvas-fraction coords to screen coords,
-    // accounting for object-fit:cover + object-position:bottom
+    // Convert canvas-fraction coords to screen coords.
+    // Container = 5/6 of natural height, object-position:bottom.
+    // Image always scales by width for this aspect ratio.
     function canvasToScreen(cx, cy) {
       const rect    = header.getBoundingClientRect();
       const screenW = rect.width;
       const screenH = rect.height;
 
-      // Scale factor — cover means the canvas fills the container
-      const scale = Math.max(screenW / CANVAS_W, screenH / CANVAS_H);
-      const scaledW = CANVAS_W * scale;
+      // Scale by width (image is wide, always fits by width)
+      const scale   = screenW / CANVAS_W;
       const scaledH = CANVAS_H * scale;
 
-      // object-position: bottom → align bottom edges
-      const offsetX = (screenW - scaledW) / 2;   // center horizontally
-      const offsetY = screenH - scaledH;          // align to bottom
+      // object-position:bottom → bottom edges align, top is cropped
+      const offsetY = screenH - scaledH; // negative — top of image above container
 
       return {
-        x: cx * scaledW + offsetX,
+        x: cx * screenW,
         y: cy * scaledH + offsetY,
       };
     }
@@ -813,7 +820,52 @@
       return null;
     }
 
-    // Cursor tracking
+    /* ── Debug overlay ──
+       Press 'd' to toggle colored boxes over hit regions.
+       Use this to tune x/y/w/h values in hitRegions. */
+    const debugCanvas = el('debug-canvas');
+    const debugCtx    = debugCanvas.getContext('2d');
+    let   debugOn     = false;
+
+    function resizeDebug() {
+      debugCanvas.width  = header.offsetWidth;
+      debugCanvas.height = header.offsetHeight;
+    }
+    resizeDebug();
+    window.addEventListener('resize', resizeDebug);
+
+    const debugColors = ['#ff000088','#00cc0088','#0066ff88','#ffcc0088',
+                         '#ff00ff88','#00cccc88','#ff880088','#88ff0088',
+                         '#ffffff88','#ff444488','#44ff4488','#4444ff88'];
+
+    function drawDebug() {
+      debugCtx.clearRect(0, 0, debugCanvas.width, debugCanvas.height);
+      if (!debugOn) return;
+      hitRegions.forEach((r, i) => {
+        const tl = canvasToScreen(r.x,       r.y);
+        const br = canvasToScreen(r.x + r.w, r.y + r.h);
+        debugCtx.fillStyle   = debugColors[i % debugColors.length];
+        debugCtx.strokeStyle = '#000';
+        debugCtx.lineWidth   = 1.5;
+        debugCtx.fillRect  (tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+        debugCtx.strokeRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+        debugCtx.fillStyle = '#000';
+        debugCtx.font      = 'bold 12px monospace';
+        debugCtx.fillText(r.id, tl.x + 4, tl.y + 16);
+      });
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'd' || e.key === 'D') {
+        debugOn = !debugOn;
+        debugCanvas.style.display = debugOn ? 'block' : 'none';
+        drawDebug();
+        console.log('%cHit region debug: ' + (debugOn ? 'ON — coloured boxes show region positions' : 'OFF'),
+          'color: ' + (debugOn ? 'green' : 'red') + '; font-weight: bold');
+      }
+    });
+
+    // Cursor + hover tracking
     header.addEventListener('mousemove', e => {
       const rect = header.getBoundingClientRect();
       const mx = e.clientX - rect.left;
@@ -828,16 +880,17 @@
     });
 
     header.addEventListener('click', e => {
-      const rect = header.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
+      const rect   = header.getBoundingClientRect();
+      const mx     = e.clientX - rect.left;
+      const my     = e.clientY - rect.top;
       const region = getHitRegion(mx, my);
+      console.log('Header click:', region ? region.id : 'no region hit', `(${mx.toFixed(0)}, ${my.toFixed(0)})`);
       if (region) onHeaderClick(region);
     });
 
     // Mousedown on header for pull cord drag
     header.addEventListener('mousedown', e => {
-      const rect = header.getBoundingClientRect();
+      const rect   = header.getBoundingClientRect();
       const region = getHitRegion(e.clientX - rect.left, e.clientY - rect.top);
       if (region && region.id === 'pullleaf') {
         onDragStart(e.clientY);
