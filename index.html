@@ -8,12 +8,18 @@
   <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <style>
     :root {
-      --paper:    #F0EBE0;
-      --ink:      #0D0B08;
-      --purple:   #7C5CBF;
-      /* Canvas 3161×1124. Show bottom 5/6 (crop top 1/6).
-         = (100vw × 1124/3161) × 5/6                         */
-      --header-h: calc(100vw * 1124 / 3161 * 5 / 6);
+      --paper:     #F8F5F0;  /* match to your Krita canvas background — eyedrop the header PNG to get exact value */
+      --ink:       #0D0B08;
+      --purple:    #7C5CBF;
+
+      /* Canvas is 3161 × 1124px.
+         natural-h = full image height at current screen width.
+         header-h  = 5/6 of natural (crop top 1/6 of canvas).
+         peek-h    = bottom 1/6 of natural — stays visible when scrolled.
+         hide-tx   = translateY to leave only peek-h showing.         */
+      --natural-h: calc(100vw * 1124 / 3161);
+      --header-h:  calc(var(--natural-h) * 5 / 6);
+      --peek-h:    calc(var(--natural-h) / 6);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,11 +32,13 @@
       font-size: 15px;
       line-height: 1.7;
       overflow-x: hidden;
-      /* +2px overlap prevents 1px gap artifact at header edge */
       padding-top: calc(var(--header-h) - 2px);
-      transition: padding-top 0.5s ease;
+      transition: padding-top 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
-    body.header-hidden { padding-top: 0; }
+
+    /* When scrolled: show peek strip, rest of banner tucked away */
+    body.header-peeking { padding-top: calc(var(--peek-h) - 2px); }
+    body.header-hidden  { padding-top: 0; }
 
     a { color: inherit; text-decoration: none; }
     img { display: block; max-width: 100%; }
@@ -40,16 +48,18 @@
       position: fixed;
       top: 0; left: 0; right: 0;
       z-index: 200;
-      /* +2px height matches body padding overlap */
       height: calc(var(--header-h) + 2px);
       overflow: hidden;
       transform: translateY(0);
-      transition: transform 0.5s cubic-bezier(0.4,0,0.2,1);
+      /* Smooth spring-like easing — feels like a blind/roller */
+      transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
-    #site-header.hidden { transform: translateY(-100%); }
 
-    /* All PNGs are from the same 3161×1124 Krita canvas.
-       Stacked full-size. object-position:bottom crops top 1/6. */
+    /* Peeking state: -80% of header height = leaves bottom 1/6 natural visible */
+    #site-header.peeking { transform: translateY(-80%); }
+    #site-header.hidden  { transform: translateY(-100%); }
+
+    /* All PNGs from same 3161×1124 canvas — stack and crop identically */
     .layer {
       position: absolute;
       left: 0; top: 0;
@@ -62,70 +72,32 @@
     }
     #bg { filter: contrast(1.05); }
 
-    /* ── Leaf pull cord ── */
-    #leaf-pull {
+    /* ── Pull cord strip ──
+       Thin clickable strip that sits at the peek area when header is peeking.
+       Users can also just grab the visible B15 leaf in the peek strip.
+       This is a fallback for easy grab on mobile. */
+    #pull-strip {
       position: fixed;
-      top: 0; left: 50%;
-      transform: translateX(-50%);
-      z-index: 300;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      cursor: grab;
-      user-select: none;
+      top: calc(var(--peek-h) - 2px);
+      left: 0; right: 0;
+      height: 20px;
+      z-index: 201;
+      cursor: n-resize;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.4s ease;
+      transition: top 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
-    #leaf-pull.visible  { opacity: 1; pointer-events: all; }
-    #leaf-pull.grabbing { cursor: grabbing; }
-
-    .pull-string {
-      width: 1px;
-      height: calc(33vh - 70px);
-      background: var(--ink);
-      opacity: 0.4;
-    }
-    .pull-leaf {
-      width: 48px; height: auto;
-      animation: sway 3s ease-in-out infinite;
-      transform-origin: 50% 0%;
-    }
-    @keyframes sway {
-      0%,100% { transform: rotate(-7deg); }
-      50%      { transform: rotate(7deg); }
-    }
-    .pull-hint {
-      font-size: 0.58rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      opacity: 0.22;
-      margin-top: 5px;
-      white-space: nowrap;
-      animation: fadepulse 4s ease-in-out infinite;
-    }
-    @keyframes fadepulse {
-      0%,100% { opacity: 0.1; }
-      50%      { opacity: 0.3; }
+    #pull-strip.active {
+      pointer-events: all;
     }
 
-    /* Idle animations */
-    @keyframes bob {
-      /* Subtle — 2px max, no rotation */
-      0%,100% { transform: translateY(0); }
-      50%      { transform: translateY(-2px); }
-    }
-    @keyframes feetdangle {
-      0%,100% { transform: rotate(-3deg); }
-      50%      { transform: rotate(3deg); }
-    }
-
-    /* ── Main ── */
+    /* ── Main content ── */
     main {
       max-width: 860px;
       margin: 0 auto;
-      padding: 4rem 2.5rem 2rem;
+      padding: 3rem 2.5rem 2rem;
     }
+
     .section-label {
       font-size: 0.68rem;
       letter-spacing: 0.25em;
@@ -145,26 +117,62 @@
     }
 
     /* Work */
-    #work { margin-bottom: 6rem; }
+    #work { margin-bottom: 5rem; }
     .project { padding: 2.5rem 0; border-top: 1px solid rgba(13,11,8,0.1); }
     .project:last-child { border-bottom: 1px solid rgba(13,11,8,0.1); }
     .project-number { font-size: 0.6rem; letter-spacing: 0.2em; opacity: 0.28; margin-bottom: 0.5rem; }
     .project-title  { font-size: 1.75rem; font-weight: 700; line-height: 1.1; margin-bottom: 0.3rem; }
     .project-sub    { font-size: 0.7rem; opacity: 0.38; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
-    .project-desc   { font-size: 0.87rem; opacity: 0.62; max-width: 52ch; margin-bottom: 1rem; }
-    .project-tags   { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1rem; }
+    .project-desc   { font-size: 0.87rem; opacity: 0.62; max-width: 52ch; margin-bottom: 1.2rem; }
+    .project-tags   { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1.2rem; }
     .tag { font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid rgba(13,11,8,0.18); padding: 0.18rem 0.45rem; }
-    .project-link { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; border-bottom: 1px solid currentColor; padding-bottom: 1px; opacity: 0.48; transition: opacity 0.2s, color 0.2s; }
+    .project-link {
+      font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase;
+      border-bottom: 1px solid currentColor; padding-bottom: 1px;
+      opacity: 0.48; transition: opacity 0.2s, color 0.2s;
+    }
     .project-link:hover { opacity: 1; color: var(--purple); }
     .project-soon { font-size: 0.7rem; opacity: 0.22; font-style: italic; }
 
+    /* Embed containers */
+    .embed-wrap {
+      position: relative;
+      width: 100%;
+      padding-bottom: 56.25%; /* 16:9 */
+      height: 0;
+      overflow: hidden;
+      margin-bottom: 1.2rem;
+      background: var(--ink);
+    }
+    .embed-wrap iframe {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      border: none;
+    }
+
+    .bandcamp-wrap {
+      margin-bottom: 1.2rem;
+    }
+    .bandcamp-wrap iframe {
+      border: none;
+      width: 100%;
+      height: 120px;
+    }
+
     /* About */
-    #about { margin-bottom: 6rem; }
+    #about { margin-bottom: 5rem; }
     .about-text p { font-size: 0.87rem; opacity: 0.62; max-width: 52ch; margin-bottom: 1rem; }
+
+    /* Credits */
     .credits-block { margin-top: 2.5rem; }
     .credits-block h3 { font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.32; margin-bottom: 0.8rem; }
     .credit-list { list-style: none; }
-    .credit-list li { font-size: 0.78rem; padding: 0.45rem 0; border-bottom: 1px solid rgba(13,11,8,0.07); display: flex; justify-content: space-between; gap: 1rem; align-items: baseline; }
+    .credit-list li {
+      font-size: 0.78rem; padding: 0.45rem 0;
+      border-bottom: 1px solid rgba(13,11,8,0.07);
+      display: flex; justify-content: space-between; gap: 1rem; align-items: baseline;
+    }
     .credit-role { font-size: 0.62rem; opacity: 0.32; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
 
     /* Contact */
@@ -184,66 +192,190 @@
     .social-links { display: flex; flex-direction: column; align-items: flex-end; gap: 1rem; }
     .social-link { font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.38; transition: opacity 0.2s, color 0.2s; }
     .social-link:hover { opacity: 1; color: #A68AD0; }
-    .footer-bar { grid-column: 1/-1; border-top: 1px solid rgba(242,237,226,0.08); padding-top: 1.8rem; font-size: 0.6rem; opacity: 0.18; letter-spacing: 0.1em; text-transform: uppercase; display: flex; justify-content: space-between; }
+    .footer-bar {
+      grid-column: 1/-1;
+      border-top: 1px solid rgba(242,237,226,0.08);
+      padding-top: 1.8rem;
+      font-size: 0.6rem; opacity: 0.18; letter-spacing: 0.1em; text-transform: uppercase;
+      display: flex; justify-content: space-between;
+    }
 
     @media (max-width: 700px) {
       main { padding: 3rem 1.5rem 2rem; }
       #contact { grid-template-columns: 1fr; margin: 0 -1.5rem; padding: 4rem 1.5rem; }
       .social-links { align-items: flex-start; }
     }
+
+    /* Idle animations */
+    @keyframes feetdangle {
+      0%,100% { transform: rotate(-3deg); }
+      50%      { transform: rotate(3deg); }
+    }
   </style>
 </head>
 <body>
 
+  <!-- ── Header — layered PNG scene ──────────────────────────────
+       All PNGs exported from same 3161×1124 Krita canvas.
+       They stack perfectly — transparency handles positioning.
+       Order = back to front.
+  ─────────────────────────────────────────────────────────────── -->
   <header id="site-header">
-    <img class="layer" id="bg"    src="assets/B29 Background.png"                    alt="Elue scene">
-    <img class="layer" id="b1"    src="assets/B1 Leafs.png"                          alt="">
-    <img class="layer" id="b2"    src="assets/B2 Boat.png"                           alt="">
-    <img class="layer" id="b3"    src="assets/B3 Water.png"                          alt="">
-    <img class="layer" id="b4"    src="assets/B4 Sun.png"                            alt="">
-    <img class="layer" id="b5"    src="assets/B5 Garbage pile.png"                   alt="">
-    <img class="layer" id="b6"    src="assets/B6 White bubbles in garbage.png"       alt="">
-    <img class="layer" id="b7"    src="assets/B7 About.png"                          alt="">
-    <img class="layer" id="b8"    src="assets/B8 Apartment windows.png"              alt="">
-    <img class="layer" id="b9"    src="assets/B9 Apartment door.png"                 alt="">
-    <img class="layer" id="b10"   src="assets/B10 Up top egg things.png"             alt="">
-    <img class="layer" id="b11"   src="assets/B11 Bird.png"                          alt="">
-    <img class="layer" id="b11-1" src="assets/B11.1 Bird.png"                        alt="">
-    <img class="layer" id="b12"   src="assets/B12 Eyes.png"                          alt="">
-    <img class="layer" id="b13"   src="assets/B13 Elue.png"                          alt="">
-    <img class="layer" id="b14"   src="assets/B14 Elue background birds.png"         alt="">
-    <img class="layer" id="b15"   src="assets/B15 Pull down leaf.png"                alt="">
-    <img class="layer" id="b16"   src="assets/B16 Metal pipe.png"                    alt="">
-    <img class="layer" id="b17"   src="assets/B17 Bird.png"                          alt="">
-    <img class="layer" id="b18"   src="assets/B18 Cat.png"                           alt="">
-    <img class="layer" id="b19"   src="assets/B19 Sidewalk.png"                      alt="">
-    <img class="layer" id="b20"   src="assets/B20 Contact.png"                       alt="">
-    <img class="layer" id="b21"   src="assets/B21 Guy with hair.png"                 alt="">
-    <img class="layer" id="b22"   src="assets/B22 Apartment.png"                     alt="">
-    <img class="layer" id="b23"   src="assets/B23 Big book.png"                      alt="">
-    <img class="layer" id="b24"   src="assets/B24 Window.png"                        alt="">
-    <img class="layer" id="b25"   src="assets/B25 Bad teeth guy.png"                 alt="">
-    <img class="layer" id="b26"   src="assets/B26 Bad teeth guy feet.png"            alt="">
-    <img class="layer" id="b26-1" src="assets/B26.1 Bad teeth guy feet dangling.png" alt="">
-    <img class="layer" id="b27"   src="assets/B27 Door.png"                          alt="">
-    <img class="layer" id="b28"   src="assets/B28 Eyeball above Elue.png"            alt="">
+
+    <!-- Base layer -->
+    <img class="layer" id="bg"     src="assets/B29 Background.png"                    alt="Elue scene">
+
+    <!-- Main elements -->
+    <img class="layer" id="b1"     src="assets/B1 Leafs.png"                          alt="">
+    <img class="layer" id="b2"     src="assets/B2 Boat.png"                           alt="">
+    <img class="layer" id="b3"     src="assets/B3 Water.png"                          alt="">
+    <img class="layer" id="b4"     src="assets/B4 Sun.png"                            alt="">
+    <img class="layer" id="b5"     src="assets/B5 Garbage pile.png"                   alt="">
+    <img class="layer" id="b6"     src="assets/B6 White bubbles in garbage.png"       alt="">
+    <img class="layer" id="b7"     src="assets/B7 About.png"                          alt="">
+    <img class="layer" id="b8"     src="assets/B8 Apartment windows.png"              alt="">
+    <img class="layer" id="b9"     src="assets/B9 Apartment door.png"                 alt="">
+    <img class="layer" id="b10"    src="assets/B10 Up top egg things.png"             alt="">
+    <img class="layer" id="b11"    src="assets/B11 Bird.png"                          alt="">
+    <img class="layer" id="b12"    src="assets/B12 Eyes.png"                          alt="">
+    <img class="layer" id="b13"    src="assets/B13 Elue.png"                          alt="">
+    <img class="layer" id="b14"    src="assets/B14 Elue background birds.png"         alt="">
+    <img class="layer" id="b15"    src="assets/B15 Pull down leaf.png"                alt="">
+    <img class="layer" id="b16"    src="assets/B16 Metal pipe.png"                    alt="">
+    <img class="layer" id="b17"    src="assets/B17 Bird.png"                          alt="">
+    <img class="layer" id="b18"    src="assets/B18 Cat.png"                           alt="">
+    <img class="layer" id="b19"    src="assets/B19 Sidewalk.png"                      alt="">
+    <img class="layer" id="b20"    src="assets/B20 Contact.png"                       alt="">
+    <img class="layer" id="b21"    src="assets/B21 Guy with hair.png"                 alt="">
+    <img class="layer" id="b22"    src="assets/B22 Apartment.png"                     alt="">
+    <img class="layer" id="b23"    src="assets/B23 Big book.png"                      alt="">
+    <img class="layer" id="b24"    src="assets/B24 Window.png"                        alt="">
+    <img class="layer" id="b25"    src="assets/B25 Bad teeth guy.png"                 alt="">
+    <img class="layer" id="b26"    src="assets/B26 Bad teeth guy feet.png"            alt="">
+    <img class="layer" id="b27"    src="assets/B27 Door.png"                          alt="">
+    <img class="layer" id="b28"    src="assets/B28 Eyeball above Elue.png"            alt="">
+
+    <!-- ── Sub-elements (separated moving parts) ──
+         All use simple naming: B[number].[sub].png
+         Hidden by default where noted — JS reveals on trigger.
+         Frame-by-frame sequences go here when ready.        -->
+
+    <!-- B1 — Individual leaves: 1-12 left bundle, 13-15 right bundle -->
+    <img class="layer" id="b1-1"   src="assets/B1.1.png"  alt="">
+    <img class="layer" id="b1-2"   src="assets/B1.2.png"  alt="">
+    <img class="layer" id="b1-3"   src="assets/B1.3.png"  alt="">
+    <img class="layer" id="b1-4"   src="assets/B1.4.png"  alt="">
+    <img class="layer" id="b1-5"   src="assets/B1.5.png"  alt="">
+    <img class="layer" id="b1-6"   src="assets/B1.6.png"  alt="">
+    <img class="layer" id="b1-7"   src="assets/B1.7.png"  alt="">
+    <img class="layer" id="b1-8"   src="assets/B1.8.png"  alt="">
+    <img class="layer" id="b1-9"   src="assets/B1.9.png"  alt="">
+    <img class="layer" id="b1-10"  src="assets/B1.10.png" alt="">
+    <img class="layer" id="b1-11"  src="assets/B1.11.png" alt="">
+    <img class="layer" id="b1-12"  src="assets/B1.12.png" alt="">
+    <img class="layer" id="b1-13"  src="assets/B1.13.png" alt="">
+    <img class="layer" id="b1-14"  src="assets/B1.14.png" alt="">
+    <img class="layer" id="b1-15"  src="assets/B1.15.png" alt="">
+
+    <!-- B6 — Individual bubbles (13 total) — hidden until popped -->
+    <img class="layer" id="b6-1"   src="assets/B6.1.png"  alt="">
+    <img class="layer" id="b6-2"   src="assets/B6.2.png"  alt="">
+    <img class="layer" id="b6-3"   src="assets/B6.3.png"  alt="">
+    <img class="layer" id="b6-4"   src="assets/B6.4.png"  alt="">
+    <img class="layer" id="b6-5"   src="assets/B6.5.png"  alt="">
+    <img class="layer" id="b6-6"   src="assets/B6.6.png"  alt="">
+    <img class="layer" id="b6-7"   src="assets/B6.7.png"  alt="">
+    <img class="layer" id="b6-8"   src="assets/B6.8.png"  alt="">
+    <img class="layer" id="b6-9"   src="assets/B6.9.png"  alt="">
+    <img class="layer" id="b6-10"  src="assets/B6.10.png" alt="">
+    <img class="layer" id="b6-11"  src="assets/B6.11.png" alt="">
+    <img class="layer" id="b6-12"  src="assets/B6.12.png" alt="">
+    <img class="layer" id="b6-13"  src="assets/B6.13.png" alt="">
+
+    <!-- B8 — Windows: 1-2 left building, 3-9 right building -->
+    <img class="layer" id="b8-1"   src="assets/B8.1.png"  alt="">
+    <img class="layer" id="b8-2"   src="assets/B8.2.png"  alt="">
+    <img class="layer" id="b8-3"   src="assets/B8.3.png"  alt="">
+    <img class="layer" id="b8-4"   src="assets/B8.4.png"  alt="">
+    <img class="layer" id="b8-5"   src="assets/B8.5.png"  alt="">
+    <img class="layer" id="b8-6"   src="assets/B8.6.png"  alt="">
+    <img class="layer" id="b8-7"   src="assets/B8.7.png"  alt="">
+    <img class="layer" id="b8-8"   src="assets/B8.8.png"  alt="">
+    <img class="layer" id="b8-9"   src="assets/B8.9.png"  alt="">
+
+    <!-- B10 — Individual eggs -->
+    <img class="layer" id="b10-1"  src="assets/B10.1.png" alt="">
+    <img class="layer" id="b10-2"  src="assets/B10.2.png" alt="">
+    <img class="layer" id="b10-3"  src="assets/B10.3.png" alt="">
+    <img class="layer" id="b10-4"  src="assets/B10.4.png" alt="">
+
+    <!-- B11 — Bird sub-elements -->
+    <img class="layer" id="b11-1"  src="assets/B11.1.png" alt="">  <!-- pupil -->
+    <img class="layer" id="b11-2"  src="assets/B11.2.png" alt="">  <!-- bottom jaw -->
+
+    <!-- B12 — Eyeballs -->
+    <img class="layer" id="b12-1"  src="assets/B12.1.png" alt="">
+    <img class="layer" id="b12-2"  src="assets/B12.2.png" alt="">
+    <img class="layer" id="b12-3"  src="assets/B12.3.png" alt="">
+
+    <!-- B14 — Two birds -->
+    <img class="layer" id="b14-1"  src="assets/B14.1.png" alt="">
+    <img class="layer" id="b14-2"  src="assets/B14.2.png" alt="">
+
+    <!-- B17 — Bird right sub-elements -->
+    <img class="layer" id="b17-1"  src="assets/B17.1.png" alt="">  <!-- pupil -->
+    <img class="layer" id="b17-2"  src="assets/B17.2.png" alt="">  <!-- head -->
+    <img class="layer" id="b17-3"  src="assets/B17.3.png" alt="">  <!-- jaw -->
+
+    <!-- B18 — Cat eyes -->
+    <img class="layer" id="b18-1"  src="assets/B18.1.png" alt="">  <!-- L eye -->
+    <img class="layer" id="b18-2"  src="assets/B18.2.png" alt="">  <!-- L pupil -->
+    <img class="layer" id="b18-3"  src="assets/B18.3.png" alt="">  <!-- R eye -->
+    <img class="layer" id="b18-4"  src="assets/B18.4.png" alt="">  <!-- R pupil -->
+
+    <!-- B21 — Guy with hair -->
+    <img class="layer" id="b21-1"  src="assets/B21.1.png" alt="">  <!-- guy body (physics) -->
+    <img class="layer" id="b21-2"  src="assets/B21.2.png" alt="">  <!-- hair (physics) -->
+    <img class="layer" id="b21-3"  src="assets/B21.3.png" alt="">  <!-- smoke rings (fbf) -->
+
+    <!-- B22 — Apartment windows -->
+    <img class="layer" id="b22-1"  src="assets/B22.1.png" alt="">
+    <img class="layer" id="b22-2"  src="assets/B22.2.png" alt="">
+
+    <!-- B24 — Window guys + curtains -->
+    <img class="layer" id="b24-1"  src="assets/B24.1.png" alt="">  <!-- guy 1 -->
+    <img class="layer" id="b24-2"  src="assets/B24.2.png" alt="">  <!-- guy 2 -->
+    <img class="layer" id="b24-3"  src="assets/B24.3.png" alt="">  <!-- guy 3 -->
+    <img class="layer" id="b24-4"  src="assets/B24.4.png" alt="">  <!-- curtains -->
+
+    <!-- B26 — Bad teeth guy feet (dangling — hidden until shoes pop) -->
+    <img class="layer" id="b26-1"  src="assets/B26.1.png" alt="">
+
   </header>
 
-  <div id="leaf-pull" aria-label="Pull to reveal header">
-    <div class="pull-string" id="pull-string"></div>
-    <img class="pull-leaf" src="assets/B15 Pull down leaf.png" alt="">
-    <span class="pull-hint">pull to open</span>
-  </div>
+  <!-- Invisible grab strip at the peek edge — helps on mobile -->
+  <div id="pull-strip"></div>
 
+
+  <!-- ── Page content ──────────────────────────────────────────── -->
   <main>
 
     <section id="work">
       <p class="section-label">Selected work</p>
 
+      <!-- 01 — Snooze Quest -->
       <article class="project">
         <p class="project-number">01</p>
         <h2 class="project-title">Snooze Quest</h2>
         <p class="project-sub">Victoria Vincent · Adult Swim · 2024–25</p>
+        <div class="embed-wrap">
+          <iframe
+            src="https://www.youtube.com/embed/CY-ZZefOhBo"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+            title="Snooze Quest — Victoria Vincent / Adult Swim"
+          ></iframe>
+        </div>
         <p class="project-desc">
           Original score and sound design for Victoria Vincent's animated short,
           screened as part of Adult Swim's programming.
@@ -254,9 +386,10 @@
           <span class="tag">Sound design</span>
           <span class="tag">Short film</span>
         </div>
-        <a class="project-link" href="#" target="_blank" rel="noopener">Watch →</a>
+        <a class="project-link" href="https://www.youtube.com/watch?v=CY-ZZefOhBo" target="_blank" rel="noopener">Watch →</a>
       </article>
 
+      <!-- 02 — Dream Journal -->
       <article class="project">
         <p class="project-number">02</p>
         <h2 class="project-title">Dream Journal</h2>
@@ -270,11 +403,34 @@
           <span class="tag">Recording</span>
           <span class="tag">Post-production</span>
         </div>
-        <a class="project-link" href="#" target="_blank" rel="noopener">Listen →</a>
+        <a class="project-link" href="https://rachelwalton.bandcamp.com/album/dream-journal" target="_blank" rel="noopener">Listen →</a>
       </article>
 
+      <!-- 03 — Elue on Bandcamp -->
       <article class="project">
         <p class="project-number">03</p>
+        <h2 class="project-title">Elue</h2>
+        <p class="project-sub">Solo releases · Bandcamp</p>
+        <!-- Replace this iframe src with your actual Bandcamp embed code.
+             Go to elue.bandcamp.com → share/embed on any release → copy the iframe src URL.
+             The format is: https://bandcamp.com/EmbeddedPlayer/album=XXXXXXXXX/...  -->
+        <div class="bandcamp-wrap">
+          <iframe
+            src="https://bandcamp.com/EmbeddedPlayer/album=placeholder/size=large/bgcol=ffffff/linkcol=0d0b08/tracklist=false/artwork=small/transparent=true/"
+            seamless
+            title="Elue on Bandcamp"
+          ></iframe>
+        </div>
+        <div class="project-tags">
+          <span class="tag">Electronic</span>
+          <span class="tag">Experimental</span>
+        </div>
+        <a class="project-link" href="https://elue.bandcamp.com/" target="_blank" rel="noopener">Listen on Bandcamp →</a>
+      </article>
+
+      <!-- 04 — Portrait of The Issue -->
+      <article class="project">
+        <p class="project-number">04</p>
         <h2 class="project-title">Portrait of The Issue</h2>
         <p class="project-sub">Naima · Summer 2026</p>
         <p class="project-desc">
@@ -295,23 +451,17 @@
     <section id="about">
       <p class="section-label">About</p>
       <div class="about-text">
+        <!-- Rewrite this in your own voice.
+             Criteria: one paragraph, first person, present tense.
+             No adjectives you wouldn't say out loud.
+             Treat it like you're telling someone at the bar what you do.
+             Answer: what do you make, who makes it with you, what does it feel like. -->
         <p>
-          I'm Elue — a sound designer and composer based in Edmonton, Alberta.
-          I work primarily with animators and filmmakers who want something
-          that doesn't sound like it came from a library.
-        </p>
-        <p>
-          My background is in production, jazz piano, and making electronic
-          music in bedroom studios since I was twelve.
-          MacEwan University music program, graduated 2025.
-          I work in Ableton. I make noise.
-        </p>
-        <p>
-          The drawings and the audio come from the same place —
-          raw, intricate, a little weird. I think that's good.
+          [Your paragraph here — see criteria in code comment above]
         </p>
         <div class="credits-block">
           <h3>Credits</h3>
+          <!-- Paste full project list from your spreadsheet here -->
           <ul class="credit-list">
             <li>Snooze Quest — Victoria Vincent / Adult Swim <span class="credit-role">Score · Sound design</span></li>
             <li>Praise God, The Mouse Is Dead! — Trevor Mac  <span class="credit-role">Score · Sound design</span></li>
@@ -319,6 +469,7 @@
             <li>Long Sword — Malcolm Guglich                <span class="credit-role">Production · Piano</span></li>
             <li>GIRAF21 Indie Mixtape — Quickdraw           <span class="credit-role">Scoring</span></li>
             <li>Portrait of The Issue — Naima               <span class="credit-role">Co-writing · Production · Piano</span></li>
+            <!-- Add remaining credits from project list spreadsheet -->
           </ul>
         </div>
       </div>
@@ -331,9 +482,9 @@
       </div>
       <div class="contact-right">
         <div class="social-links">
-          <a class="social-link" href="https://bandcamp.com"  target="_blank" rel="noopener">Bandcamp</a>
-          <a class="social-link" href="https://youtube.com"   target="_blank" rel="noopener">YouTube</a>
-          <a class="social-link" href="https://instagram.com" target="_blank" rel="noopener">Instagram</a>
+          <a class="social-link" href="https://www.youtube.com/@El_ue"                    target="_blank" rel="noopener">YouTube</a>
+          <a class="social-link" href="https://elue.bandcamp.com/"                         target="_blank" rel="noopener">Bandcamp</a>
+          <a class="social-link" href="https://www.instagram.com/sean_more_like_bean/"     target="_blank" rel="noopener">Instagram</a>
         </div>
       </div>
       <div class="footer-bar">
@@ -344,101 +495,89 @@
 
   </main>
 
+
   <script>
   (function () {
 
-    /* ═══════════════════════════════════════════════════════
+    /* ═══════════════════════════════════════════════════════════
        ALPHA HIT TESTING
-       Each interactive PNG is drawn onto a small offscreen
-       canvas (1/8 scale). On click/hover, we sample the pixel
-       at the mouse position. If alpha > threshold → hit.
+       Each interactive layer is drawn onto a 1/8-scale offscreen
+       canvas. On click/hover, we convert mouse → canvas coords
+       and sample each layer's alpha. First non-transparent hit wins.
+       Perfectly follows your ink lines with no manual box tuning.
+    ═══════════════════════════════════════════════════════════ */
+    const CANVAS_W   = 3161;
+    const CANVAS_H   = 1124;
+    const MASK_SCALE = 8;
+    const MASK_W     = Math.ceil(CANVAS_W / MASK_SCALE);
+    const MASK_H     = Math.ceil(CANVAS_H / MASK_SCALE);
+    const ALPHA_MIN  = 15;
 
-       This means hit detection perfectly follows your ink
-       lines — no manual boxes, ever.
+    const header    = document.getElementById('site-header');
+    const pullStrip = document.getElementById('pull-strip');
+    const body      = document.body;
 
-       HOW IT WORKS:
-       1. Mouse position → canvas coordinates (undoing the
-          object-fit:cover + object-position:bottom transform)
-       2. Sample each interactive layer's mask, top to bottom
-       3. First non-transparent pixel wins
-
-       TO ADD A NEW INTERACTIVE LAYER:
-       Add an entry to `interactiveLayers` with the img element
-       id and the action name. The mask builds automatically.
-    ═══════════════════════════════════════════════════════ */
-
-    const CANVAS_W  = 3161;
-    const CANVAS_H  = 1124;
-    const MASK_SCALE = 8;  // 1/8 res — accurate enough, low memory
-    const MASK_W    = Math.ceil(CANVAS_W / MASK_SCALE);
-    const MASK_H    = Math.ceil(CANVAS_H / MASK_SCALE);
-    const ALPHA_MIN = 15; // ignore near-transparent edge pixels
-
-    const header   = document.getElementById('site-header');
-    const leafPull = document.getElementById('leaf-pull');
-    const pullStr  = document.getElementById('pull-string');
-    const body     = document.body;
-
-    // Interactive layers — listed back to front (front = checked first)
-    // Add entries here as you build each interaction.
+    // Interactive layers — listed front to back (front checked first).
+    // Add new entries here as you enable interactions on sub-elements.
     const interactiveLayers = [
       { imgId: 'b20',   action: 'contact'  },
       { imgId: 'b7',    action: 'about'    },
       { imgId: 'b15',   action: 'pullleaf' },
       { imgId: 'b18',   action: 'cat'      },
-      { imgId: 'b21',   action: 'guy'      },
       { imgId: 'b24',   action: 'window'   },
-      { imgId: 'b26',   action: 'feet'     },
       { imgId: 'b27',   action: 'door'     },
-      { imgId: 'b11',   action: 'bird'     },
-      { imgId: 'b2',    action: 'boat'     },
-      { imgId: 'b3',    action: 'water'    },
+      { imgId: 'b26',   action: 'feet'     },
+      { imgId: 'b25',   action: 'badteeth' },
+      { imgId: 'b21',   action: 'guy'      },
+      { imgId: 'b17',   action: 'bird2'    },
+      { imgId: 'b11',   action: 'bird1'    },
+      { imgId: 'b12',   action: 'eyes'     },
+      { imgId: 'b28',   action: 'eyeball'  },
+      { imgId: 'b14',   action: 'bgbirds'  },
+      { imgId: 'b13',   action: 'elue'     },
+      { imgId: 'b23',   action: 'book'     },
+      { imgId: 'b16',   action: 'pipe'     },
+      { imgId: 'b10',   action: 'eggs'     },
+      { imgId: 'b8',    action: 'windows'  },
+      { imgId: 'b9',    action: 'door2'    },
+      { imgId: 'b6',    action: 'bubbles'  },
       { imgId: 'b4',    action: 'sun'      },
+      { imgId: 'b3',    action: 'water'    },
+      { imgId: 'b2',    action: 'boat'     },
       { imgId: 'b1',    action: 'leaves'   },
     ];
 
-    // Build alpha masks — fires when each image loads
     function buildMask(layer) {
       const img = document.getElementById(layer.imgId);
       if (!img) return;
-
       function draw() {
         try {
           const c   = document.createElement('canvas');
-          c.width   = MASK_W;
-          c.height  = MASK_H;
+          c.width   = MASK_W; c.height = MASK_H;
           const ctx = c.getContext('2d');
           ctx.drawImage(img, 0, 0, MASK_W, MASK_H);
           layer.maskCtx = ctx;
-        } catch (e) {
-          // CORS or other issue — layer will be skipped in hit test
-          console.warn('Could not build mask for', layer.imgId, e.message);
+        } catch(e) {
+          console.warn('Mask failed:', layer.imgId, e.message);
         }
       }
-
-      if (img.complete && img.naturalWidth > 0) {
-        draw();
-      } else {
-        img.addEventListener('load', draw);
-      }
+      img.complete && img.naturalWidth > 0 ? draw() : img.addEventListener('load', draw);
     }
 
     interactiveLayers.forEach(buildMask);
 
-    // Convert header mouse coords → original canvas coords
-    function screenToCanvas(mouseX, mouseY) {
-      const headerW = header.offsetWidth;
-      const headerH = header.offsetHeight;
-      const scale   = headerW / CANVAS_W;  // always scales by width
-      const scaledH = CANVAS_H * scale;
-      const offsetY = headerH - scaledH;   // negative → top of image above container
-
-      const cx = mouseX / headerW * CANVAS_W;
-      const cy = (mouseY - offsetY) / scaledH * CANVAS_H;
-      return { cx, cy };
+    // Screen → canvas coordinate conversion
+    // Header uses object-fit:cover + object-position:bottom.
+    // Image always scales by width; offsetY is negative (image overflows top).
+    function screenToCanvas(mx, my) {
+      const hw  = header.offsetWidth;
+      const hh  = header.offsetHeight;
+      const sc  = hw / CANVAS_W;
+      const shH = CANVAS_H * sc;
+      const oy  = hh - shH;           // negative
+      return { cx: mx / hw * CANVAS_W, cy: (my - oy) / shH * CANVAS_H };
     }
 
-    // Sample a layer's mask at canvas coordinates
     function sampleAlpha(layer, cx, cy) {
       if (!layer.maskCtx) return 0;
       const mx = Math.round(cx / MASK_SCALE);
@@ -447,9 +586,8 @@
       return layer.maskCtx.getImageData(mx, my, 1, 1).data[3];
     }
 
-    // Find the topmost hit layer at screen position
-    function hitTest(mouseX, mouseY) {
-      const { cx, cy } = screenToCanvas(mouseX, mouseY);
+    function hitTest(mx, my) {
+      const { cx, cy } = screenToCanvas(mx, my);
       if (cx < 0 || cx > CANVAS_W || cy < 0 || cy > CANVAS_H) return null;
       for (const layer of interactiveLayers) {
         if (sampleAlpha(layer, cx, cy) > ALPHA_MIN) return layer;
@@ -457,25 +595,17 @@
       return null;
     }
 
-    /* ── Cursor tracking ── */
-    const pullActions = new Set(['pullleaf']);
-    const navActions  = new Set(['about', 'contact']);
-
+    // Cursor
     header.addEventListener('mousemove', e => {
       const rect = header.getBoundingClientRect();
       const hit  = hitTest(e.clientX - rect.left, e.clientY - rect.top);
-      if (!hit) {
-        header.style.cursor = 'default';
-      } else if (pullActions.has(hit.action)) {
-        header.style.cursor = 'grab';
-      } else {
-        header.style.cursor = 'pointer';
-      }
+      header.style.cursor = hit
+        ? (hit.action === 'pullleaf' ? 'grab' : 'pointer')
+        : 'default';
     });
-
     header.addEventListener('mouseleave', () => header.style.cursor = 'default');
 
-    /* ── Click handler ── */
+    // Click
     header.addEventListener('click', e => {
       const rect = header.getBoundingClientRect();
       const hit  = hitTest(e.clientX - rect.left, e.clientY - rect.top);
@@ -485,32 +615,149 @@
       }
     });
 
-    /* ── Mousedown for pull cord drag ── */
+    // Pull leaf drag — mousedown
     header.addEventListener('mousedown', e => {
       const rect = header.getBoundingClientRect();
       const hit  = hitTest(e.clientX - rect.left, e.clientY - rect.top);
-      if (hit && hit.action === 'pullleaf') {
-        startDrag(e.clientY);
-        e.preventDefault();
-      }
+      if (hit && hit.action === 'pullleaf') { startDrag(e.clientY); e.preventDefault(); }
     });
-
     header.addEventListener('touchstart', e => {
       const rect = header.getBoundingClientRect();
       const hit  = hitTest(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
       if (hit && hit.action === 'pullleaf') startDrag(e.touches[0].clientY);
     }, { passive: true });
 
+    // Pull strip (grab fallback at peek edge)
+    pullStrip.addEventListener('mousedown', e => { startDrag(e.clientY); e.preventDefault(); });
+    pullStrip.addEventListener('touchstart', e => { startDrag(e.touches[0].clientY); }, { passive: true });
 
-    /* ═══════════════════════════════════════════════════════
+
+    /* ═══════════════════════════════════════════════════════════
+       SCROLL PEEK / SHOW
+       When scrolling down: banner tucks to show bottom strip.
+       B15 leaf is visible in that strip — clicking it reveals banner.
+       Scroll back to top: banner fully revealed.
+    ═══════════════════════════════════════════════════════════ */
+    let lastScroll = 0, isPeeking = false;
+
+    function peekHeader() {
+      if (isPeeking) return;
+      isPeeking = true;
+      header.classList.add('peeking');
+      body.classList.add('header-peeking');
+      pullStrip.classList.add('active');
+    }
+
+    function showHeader() {
+      if (!isPeeking) return;
+      isPeeking = false;
+      header.classList.remove('peeking');
+      body.classList.remove('header-peeking');
+      pullStrip.classList.remove('active');
+      header.style.transform  = '';
+      header.style.transition = '';
+    }
+
+    window.addEventListener('scroll', () => {
+      const s = window.scrollY;
+      if (s > header.offsetHeight * 0.2 && s > lastScroll) peekHeader();
+      else if (s < 8) showHeader();
+      lastScroll = s;
+    }, { passive: true });
+
+
+    /* ═══════════════════════════════════════════════════════════
+       PULL CORD DRAG — with spring-back easing
+       Dragging down on the leaf/strip reveals the banner.
+       Release above threshold: spring back with momentum.
+       Release below threshold: snap open smoothly.
+    ═══════════════════════════════════════════════════════════ */
+    const PULL_THRESHOLD = 100;
+    let dragging = false, dragStart = 0, dragDelta = 0;
+    let rafId = null;
+
+    function startDrag(y) {
+      dragging  = true;
+      dragStart = y;
+      dragDelta = 0;
+      header.style.transition = 'none'; // disable CSS transition during drag
+      if (rafId) cancelAnimationFrame(rafId);
+    }
+
+    function moveDrag(y) {
+      if (!dragging) return;
+      dragDelta = Math.max(0, y - dragStart);
+      // 80% = peeking start. Drag reveals from peeking position.
+      const peekOffset  = header.offsetHeight * 0.8;   // px tucked when peeking
+      const pullPx      = Math.min(dragDelta, peekOffset + 30); // slight overscroll
+      const translatePx = -(peekOffset - pullPx);
+      header.style.transform = `translateY(${translatePx}px)`;
+    }
+
+    function endDrag() {
+      if (!dragging) return;
+      dragging = false;
+
+      if (dragDelta >= PULL_THRESHOLD) {
+        // Reveal — smooth spring to 0
+        header.style.transition = '';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        showHeader();
+      } else {
+        // Spring back to peeking position with momentum
+        springBack();
+      }
+    }
+
+    function springBack() {
+      // Get current translateY in px from computed style
+      const matrix  = new DOMMatrix(window.getComputedStyle(header).transform);
+      let pos       = matrix.m42;  // current Y translation
+      const target  = -(header.offsetHeight * 0.8);
+      let vel       = 0;
+
+      header.style.transition = 'none';
+
+      function step() {
+        vel += (target - pos) * 0.18;
+        vel *= 0.72;
+        pos += vel;
+        header.style.transform = `translateY(${pos}px)`;
+        if (Math.abs(vel) > 0.3 || Math.abs(pos - target) > 0.5) {
+          rafId = requestAnimationFrame(step);
+        } else {
+          header.style.transform = 'translateY(-80%)';
+          header.style.transition = '';
+        }
+      }
+      rafId = requestAnimationFrame(step);
+    }
+
+    window.addEventListener('mousemove', e => moveDrag(e.clientY));
+    window.addEventListener('touchmove', e => moveDrag(e.touches[0].clientY), { passive: true });
+    window.addEventListener('mouseup',   endDrag);
+    window.addEventListener('touchend',  endDrag);
+
+
+    /* ═══════════════════════════════════════════════════════════
        ACTIONS
-       Each action is a stub. Wire up your animations here
-       once you've built them in Krita.
-       Sounds: add files to assets/sounds/ and uncomment.
-    ═══════════════════════════════════════════════════════ */
+       Each action is a stub. Wire in your frame-by-frame
+       PNG sequences and sounds as you build them.
 
-    let boatClicks = 0, sunOn = true, sunClicks = 0;
-    let windowGuys = 3, shoesOn = true, doorKnocks = 0;
+       TO PLAY A FRAME SEQUENCE:
+         playSequence('b11', 8, 12, frameFiles)
+         where frameFiles = ['B11_f01.png', 'B11_f02.png', ...]
+
+       TO ADD SOUND:
+         const snd = new Audio('assets/sounds/squawk.mp3');
+         snd.play().catch(()=>{});
+    ═══════════════════════════════════════════════════════════ */
+
+    let boatClicks  = 0;
+    let sunOn       = true, sunClicks = 0;
+    let windowGuys  = 3;    // decrements as guys disappear
+    let shoesOn     = true;
+    let doorKnocks  = 0;
 
     function g(id) { return document.getElementById(id); }
 
@@ -518,30 +765,40 @@
       switch (action) {
 
         case 'about':
-          scrollTo('#about');
+          scrollToSection('#about');
           break;
 
         case 'contact':
-          scrollTo('#contact');
+          scrollToSection('#contact');
+          break;
+
+        case 'pullleaf':
+          // Pull handled by mousedown above.
+          // Click without drag: reveal banner.
+          if (!isPeeking) break;
+          showHeader();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
           break;
 
         case 'leaves':
+          // Physics: each B1.1-15 leaf spring-rotates around its branch join.
+          // FBF: B1 branch rustles. Add sequence here when ready.
           // play(sounds.leafRustleLoud);
-          // Your animation: swap/animate individual leaf PNGs
           break;
 
         case 'boat':
           boatClicks++;
           // play(sounds.sailorsYell);
+          // FBF sequence goes here — replace static img with frame src on click.
           if (boatClicks >= 5) {
             const b = g('b2');
-            if (b) { b.style.transition = 'transform 1.5s, opacity 1.5s'; b.style.transform = 'translateY(30px)'; b.style.opacity = '0'; }
+            if (b) { b.style.transition = 'transform 2s ease-in, opacity 2s'; b.style.transform = 'translateY(40px)'; b.style.opacity = '0'; }
           }
           break;
 
         case 'water':
+          // FBF splash sequence.
           // play(sounds.splash);
-          // Your animation
           break;
 
         case 'sun':
@@ -550,175 +807,259 @@
           body.style.background = sunOn ? '' : '#1a1814';
           body.style.color      = sunOn ? '' : '#c8c0b0';
           const b4 = g('b4');
-          if (b4) b4.style.opacity = sunOn ? '1' : '0.25';
+          if (b4) b4.style.opacity = sunOn ? '1' : '0.2';
           if (sunClicks >= 8 && b4) {
-            b4.style.transition = 'transform 1.2s, opacity 1.2s';
+            b4.style.transition = 'transform 1.5s ease-in, opacity 1.5s';
             b4.style.transform  = 'translateY(200%) rotate(180deg)';
             b4.style.opacity    = '0';
           }
+          // FBF sequence for toggle animation.
           break;
 
-        case 'bird':
+        case 'bubbles':
+          // Each click pops one bubble.
+          // Reveal individual B6.1-13 and fade them out one at a time.
+          // play(sounds.pop);
+          break;
+
+        case 'bird1':
+          // FBF: squawk (B11 + B11.2 jaw). Then pupil (B11.1) tracks mouse.
           // play(sounds.birdSquawk);
-          // Your animation: open beak, eye follow
+          break;
+
+        case 'bird2':
+          // FBF: squawk (B17 + B17.2 head + B17.3 jaw). Pupil B17.1 tracks mouse.
+          // play(sounds.birdSquawk);
+          break;
+
+        case 'eyes':
+          // FBF: blink. Then B12.1-3 eyeballs track mouse.
+          // play(sounds.eyeSquish);
+          break;
+
+        case 'eyeball':
+          // B28 eyeball above Elue — pupil tracks mouse.
+          break;
+
+        case 'elue':
+          // FBF: slow colour glow. Same as about/contact.
+          // play(sounds.slowHum);
+          break;
+
+        case 'bgbirds':
+          // FBF: flap and disappear. B14.1 and B14.2 independent.
+          // play(sounds.birdCaw);
           break;
 
         case 'cat':
+          // FBF: blink on click. B18.1-4 pupils track mouse after.
+          // Hover 3s: B18 closes eyes.
           // play(sounds.catMeow);
-          // Your animation
           break;
 
         case 'guy':
+          // FBF: guy tucks chin. B21.2 hair physics on click.
+          // Hover: voice line cycle.
           // play(sounds.guyClick);
-          // Your animation: shake hair
+          break;
+
+        case 'badteeth':
+          // Hover: feet kick (physics). Click: voice line.
+          kickFeet();
+          // play(sounds.badTeethVoice);
+          break;
+
+        case 'windows':
+          // Click: light turns off in one window.
+          // B8.1-9 individual windows fade to dark.
+          // play(sounds.windowAmbience);
           break;
 
         case 'window':
+          // B24 — each click removes one guy.
+          // Swap to B24.1 → B24.2 → B24.3 → B24.4 curtains only.
           windowGuys = Math.max(0, windowGuys - 1);
-          // play(sounds.windowKnock);
-          // Your animation: remove one guy per click
+          // Stub — reveal correct sub-element based on windowGuys count.
+          // play(sounds.windowGiggle);
+          break;
+
+        case 'pipe':
+          // FBF: clang and vibrate.
+          // play(sounds.pipeclang);
+          break;
+
+        case 'eggs':
+          // Physics: B10.1-4 each rotate around their perceived base.
+          // play(sounds.eggPercuss);
+          break;
+
+        case 'book':
+          // Hover with velocity: page flutter sound.
+          // play(sounds.bookFlutter);
+          break;
+
+        case 'door2':
+          // B9 — three knocks, light turns on, guy opens door.
+          doorKnocks++;
+          // play(sounds.doorKnock);
+          if (doorKnocks >= 3) doorKnocks = 0;
           break;
 
         case 'feet':
           if (shoesOn) {
             shoesOn = false;
-            const b26 = g('b26'), b261 = g('b26-1');
-            if (b26)  { b26.style.transition  = 'opacity 0.3s'; b26.style.opacity  = '0'; }
-            if (b261) { b261.style.transition = 'opacity 0.3s'; b261.style.opacity = '1'; }
+            // FBF shoe-pop animation goes here on both feet.
+            // For now: brief scale pop then settle.
+            feet.forEach(f => {
+              if (!f.el) return;
+              f.el.style.transition = 'transform 0.15s';
+              f.el.style.transform  = 'rotate(-8deg)';
+              setTimeout(() => {
+                f.el.style.transition = '';
+                f.el.style.transform  = '';
+                activateFeet();
+              }, 150);
+            });
             // play(sounds.shoePop);
           } else {
+            kickFeet();
             // play(sounds.feetGiggle);
           }
           break;
 
         case 'door':
+          // B27 — three knocks, flash.
           doorKnocks++;
           // play(sounds.doorKnock);
           if (doorKnocks >= 3) {
             doorKnocks = 0;
-            // Your animation: guy pops out
+            const b27 = g('b27');
+            if (b27) { b27.style.filter = 'brightness(1.5)'; setTimeout(() => b27.style.filter = '', 700); }
           }
           break;
       }
     }
 
-    function scrollTo(sel) {
+    function scrollToSection(sel) {
       const el = document.querySelector(sel);
       if (!el) return;
       window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 20, behavior: 'smooth' });
     }
 
 
-    /* ═══════════════════════════════════════════════════════
-       SCROLL HIDE / SHOW
-    ═══════════════════════════════════════════════════════ */
-    let lastScroll = 0, isHidden = false;
+    /* ═══════════════════════════════════════════════════════════
+       FEET PHYSICS
+       B26 = left foot, B26.1 = right foot.
+       Both visible from start (shoes on).
+       After shoe-pop: independent pendulum physics per foot.
 
-    function hideHeader() {
-      if (isHidden) return;
-      isHidden = true;
-      header.classList.add('hidden');
-      body.classList.add('header-hidden');
-      leafPull.classList.add('visible');
+       transform-origin is the perceived hip/attachment point,
+       expressed as percentages of the full canvas image.
+       FILL THESE IN once you've drawn guide dots in Krita:
+         foot.pivotX = hip_x_px / 3161 * 100  (as % string)
+         foot.pivotY = hip_y_px / 1124 * 100  (as % string)
+    ═══════════════════════════════════════════════════════════ */
+
+    const feet = [
+      {
+        el:      g('b26'),
+        pivotX:  '87%',   // ← replace with eyedropped hip X from Krita guide dot
+        pivotY:  '72%',   // ← replace with eyedropped hip Y from Krita guide dot
+        angle:   0, vel: 0,
+        restAngle: -3,    // idle lean (degrees) — tune to taste
+        active:  false,
+      },
+      {
+        el:      g('b26-1'),
+        pivotX:  '89%',   // ← replace with eyedropped hip X from Krita guide dot
+        pivotY:  '72%',   // ← replace with eyedropped hip Y from Krita guide dot
+        angle:   0, vel: 0,
+        restAngle: 3,
+        active:  false,
+      },
+    ];
+
+    // Apply pivot to each foot element
+    feet.forEach(f => {
+      if (!f.el) return;
+      f.el.style.transformOrigin = `${f.pivotX} ${f.pivotY}`;
+      f.el.style.willChange      = 'transform';
+    });
+
+    // Pendulum spring — runs only when feet are active (after shoe-pop)
+    const FOOT_SPRING  = 0.04;
+    const FOOT_DAMPING = 0.88;
+    let   footRafId    = null;
+
+    function tickFeet() {
+      let anyMoving = false;
+      feet.forEach(f => {
+        if (!f.el || !f.active) return;
+        f.vel += (f.restAngle - f.angle) * FOOT_SPRING;
+        f.vel *= FOOT_DAMPING;
+        f.angle += f.vel;
+        f.el.style.transform = `rotate(${f.angle}deg)`;
+        if (Math.abs(f.vel) > 0.05) anyMoving = true;
+      });
+      footRafId = anyMoving ? requestAnimationFrame(tickFeet) : null;
     }
 
-    function showHeader() {
-      if (!isHidden) return;
-      isHidden = false;
-      header.classList.remove('hidden');
-      body.classList.remove('header-hidden');
-      leafPull.classList.remove('visible');
-      header.style.transform  = '';
-      header.style.transition = '';
+    function kickFeet() {
+      // Called on mouse-over bad teeth guy — random kick
+      feet.forEach(f => {
+        if (!f.active) return;
+        f.vel += (Math.random() - 0.5) * 6;
+        if (!footRafId) footRafId = requestAnimationFrame(tickFeet);
+      });
     }
 
-    window.addEventListener('scroll', () => {
-      const s = window.scrollY;
-      if (s > header.offsetHeight * 0.35 && s > lastScroll) hideHeader();
-      else if (s < 8) showHeader();
-      lastScroll = s;
-    }, { passive: true });
-
-
-    /* ═══════════════════════════════════════════════════════
-       PULL CORD DRAG
-    ═══════════════════════════════════════════════════════ */
-    const PULL_THRESHOLD = 80;
-    let dragging = false, dragStart = 0, dragDelta = 0;
-
-    function startDrag(y) {
-      dragging = true; dragStart = y; dragDelta = 0;
-      leafPull.classList.add('grabbing');
+    function activateFeet() {
+      feet.forEach(f => { if (f.el) f.active = true; });
+      if (!footRafId) footRafId = requestAnimationFrame(tickFeet);
     }
 
-    function moveDrag(y) {
-      if (!dragging) return;
-      dragDelta = Math.max(0, y - dragStart);
-      const base = window.innerHeight * 0.33 - 70;
-      pullStr.style.height    = Math.max(4, base + dragDelta * 0.55) + 'px';
-      const pct               = Math.min(dragDelta / PULL_THRESHOLD, 1);
-      header.style.transform  = `translateY(${-(header.offsetHeight * (1 - pct))}px)`;
-      header.style.transition = 'none';
-    }
-
-    function endDrag() {
-      if (!dragging) return;
-      dragging = false;
-      leafPull.classList.remove('grabbing');
-      pullStr.style.height    = '';
-      header.style.transition = '';
-      if (dragDelta >= PULL_THRESHOLD) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        showHeader();
-      } else {
-        header.style.transform = 'translateY(-100%)';
-      }
-    }
-
-    leafPull.addEventListener('mousedown',  e => { startDrag(e.clientY); e.preventDefault(); });
-    leafPull.addEventListener('touchstart', e => { startDrag(e.touches[0].clientY); }, { passive: true });
-    window.addEventListener('mousemove',   e => moveDrag(e.clientY));
-    window.addEventListener('touchmove',   e => moveDrag(e.touches[0].clientY), { passive: true });
-    window.addEventListener('mouseup',     endDrag);
-    window.addEventListener('touchend',    endDrag);
+    // Mouse interaction — nudge feet when cursor is near
+    header.addEventListener('mousemove', e => {
+      feet.forEach(f => {
+        if (!f.el || !f.active) return;
+        // Convert pivot % to canvas px then to screen coords
+        const { cx: px, cy: py } = screenToCanvas(
+          parseFloat(f.pivotX) / 100 * header.offsetWidth,
+          parseFloat(f.pivotY) / 100 * header.offsetHeight
+        );
+        const rect = header.getBoundingClientRect();
+        const mx   = e.clientX - rect.left;
+        const my   = e.clientY - rect.top;
+        const { cx, cy } = screenToCanvas(mx, my);
+        const dx = cx - px * CANVAS_W / 100;
+        const dy = cy - py * CANVAS_H / 100;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 200) {  // influence radius in canvas px
+          f.vel += (dx / dist) * 1.5 * (1 - dist / 200);
+          if (!footRafId) footRafId = requestAnimationFrame(tickFeet);
+        }
+      });
+    });
 
 
-    /* ═══════════════════════════════════════════════════════
-       IDLE ANIMATIONS
-    ═══════════════════════════════════════════════════════ */
-    // Boat — very subtle 2px bob
-    const boat = g('b2');
-    if (boat) boat.style.animation = 'bob 4s ease-in-out infinite';
-
-    // Feet — hidden until shoes pop off
-    const b261 = g('b26-1');
-    if (b261) {
-      b261.style.opacity         = '0';
-      b261.style.animation       = 'feetdangle 2.5s ease-in-out infinite';
-      b261.style.transformOrigin = '50% 0%';
-    }
-
-
-    /* ═══════════════════════════════════════════════════════
-       DEV TOOLS
-    ═══════════════════════════════════════════════════════ */
+    /* ═══════════════════════════════════════════════════════════
+       DEV HELPERS
+    ═══════════════════════════════════════════════════════════ */
     window.ELUE = {
-      // Log what's under the cursor at any point
-      probe: (mouseX, mouseY) => {
-        const { cx, cy } = screenToCanvas(mouseX, mouseY);
-        console.log(`Canvas coords: ${cx.toFixed(0)}, ${cy.toFixed(0)}`);
+      masks: () => interactiveLayers.forEach(l =>
+        console.log(l.action, l.maskCtx ? '✓' : '✗ (no mask — image may be 404 or not loaded)')
+      ),
+      probe: (mx, my) => {
+        const { cx, cy } = screenToCanvas(mx, my);
+        console.log(`Canvas: ${cx.toFixed(0)}, ${cy.toFixed(0)}`);
         interactiveLayers.forEach(l => {
           const a = sampleAlpha(l, cx, cy);
-          if (a > 0) console.log(`  ${l.imgId} (${l.action}): alpha=${a}`);
+          if (a > 0) console.log(`  ${l.action} alpha=${a}`);
         });
       },
-      // Show mask status
-      masks: () => interactiveLayers.forEach(l =>
-        console.log(l.action, l.maskCtx ? '✓ mask ready' : '✗ no mask')
-      ),
     };
 
-    console.log('%cElue loaded. ELUE.masks() to check hit detection status.', 'color:#7C5CBF;font-weight:bold');
+    console.log('%cElue loaded. ELUE.masks() to verify hit detection.', 'color:#7C5CBF;font-weight:bold');
 
   })();
   </script>
