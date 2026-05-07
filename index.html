@@ -49,9 +49,9 @@
       top: 0; left: 0; right: 0;
       z-index: 200;
       height: calc(var(--header-h) + 2px);
-      overflow: hidden;
+      /* overflow visible so B15 vine can hang below into the peek strip */
+      overflow: visible;
       transform: translateY(0);
-      /* Smooth spring-like easing — feels like a blind/roller */
       transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     }
 
@@ -69,8 +69,16 @@
       pointer-events: none;
       user-select: none;
       -webkit-user-drag: none;
+      /* Clip all layers to header bounds except B15 */
+      clip-path: inset(0 0 0 0);
     }
     #bg { filter: contrast(1.05); }
+
+    /* B15 vine — not clipped, extends below header when peeking */
+    #b15 {
+      clip-path: none;
+      transition: transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
 
     /* ── Pull cord strip ──
        Thin clickable strip that sits at the peek area when header is peeking.
@@ -554,7 +562,8 @@
         try {
           const c   = document.createElement('canvas');
           c.width   = MASK_W; c.height = MASK_H;
-          const ctx = c.getContext('2d');
+          // willReadFrequently tells browser to optimise for getImageData calls
+          const ctx = c.getContext('2d', { willReadFrequently: true });
           ctx.drawImage(img, 0, 0, MASK_W, MASK_H);
           layer.maskCtx = ctx;
         } catch(e) {
@@ -646,6 +655,11 @@
       header.classList.add('peeking');
       body.classList.add('header-peeking');
       pullStrip.classList.add('active');
+      // Extend vine downward into the peek strip.
+      const vine = g('b15');
+      if (vine) vine.style.transform = `translateY(${header.offsetHeight * 0.55}px)`;
+      // Disturb vine rope on banner movement
+      setTimeout(() => { if (typeof kickVine === 'function') kickVine(6); }, 100);
     }
 
     function showHeader() {
@@ -656,6 +670,9 @@
       pullStrip.classList.remove('active');
       header.style.transform  = '';
       header.style.transition = '';
+      // Retract vine back to resting position
+      const vine = g('b15');
+      if (vine) vine.style.transform = '';
     }
 
     window.addEventListener('scroll', () => {
@@ -781,15 +798,13 @@
           break;
 
         case 'leaves':
-          // Physics: each B1.1-15 leaf spring-rotates around its branch join.
-          // FBF: B1 branch rustles. Add sequence here when ready.
+          kickGroup('leaves', 5);
           // play(sounds.leafRustleLoud);
           break;
 
         case 'boat':
           boatClicks++;
           // play(sounds.sailorsYell);
-          // FBF sequence goes here — replace static img with frame src on click.
           if (boatClicks >= 5) {
             const b = g('b2');
             if (b) { b.style.transition = 'transform 2s ease-in, opacity 2s'; b.style.transform = 'translateY(40px)'; b.style.opacity = '0'; }
@@ -797,7 +812,6 @@
           break;
 
         case 'water':
-          // FBF splash sequence.
           // play(sounds.splash);
           break;
 
@@ -813,22 +827,22 @@
             b4.style.transform  = 'translateY(200%) rotate(180deg)';
             b4.style.opacity    = '0';
           }
-          // FBF sequence for toggle animation.
           break;
 
         case 'bubbles':
-          // Each click pops one bubble.
-          // Reveal individual B6.1-13 and fade them out one at a time.
+          // Each click pops one bubble — reveal B6.1-13 and fade out one at a time.
           // play(sounds.pop);
           break;
 
         case 'bird1':
-          // FBF: squawk (B11 + B11.2 jaw). Then pupil (B11.1) tracks mouse.
+          kickEl('b11-2', 8);  // jaw springs open
+          // FBF squawk sequence on B11 goes here. B11.1 pupil tracks mouse after.
           // play(sounds.birdSquawk);
           break;
 
         case 'bird2':
-          // FBF: squawk (B17 + B17.2 head + B17.3 jaw). Pupil B17.1 tracks mouse.
+          kickEl('b17-3', 8);  // jaw springs open
+          // FBF squawk on B17 + B17.2 head. B17.1 pupil tracks mouse after.
           // play(sounds.birdSquawk);
           break;
 
@@ -842,7 +856,7 @@
           break;
 
         case 'elue':
-          // FBF: slow colour glow. Same as about/contact.
+          // FBF: slow colour glow.
           // play(sounds.slowHum);
           break;
 
@@ -853,33 +867,28 @@
 
         case 'cat':
           // FBF: blink on click. B18.1-4 pupils track mouse after.
-          // Hover 3s: B18 closes eyes.
           // play(sounds.catMeow);
           break;
 
         case 'guy':
-          // FBF: guy tucks chin. B21.2 hair physics on click.
-          // Hover: voice line cycle.
+          kickGroup('guy', 6);  // B21.2 hair springs
+          // FBF: guy tucks chin on B21.1.
           // play(sounds.guyClick);
           break;
 
         case 'badteeth':
-          // Hover: feet kick (physics). Click: voice line.
-          kickFeet();
+          kickGroup('feet', 8);  // spastic foot kick
           // play(sounds.badTeethVoice);
           break;
 
         case 'windows':
-          // Click: light turns off in one window.
-          // B8.1-9 individual windows fade to dark.
+          // Click: light turns off in one window (B8.1-9).
           // play(sounds.windowAmbience);
           break;
 
         case 'window':
-          // B24 — each click removes one guy.
-          // Swap to B24.1 → B24.2 → B24.3 → B24.4 curtains only.
           windowGuys = Math.max(0, windowGuys - 1);
-          // Stub — reveal correct sub-element based on windowGuys count.
+          // Reveal B24.1 → B24.2 → B24.3 → B24.4 curtains progressively.
           // play(sounds.windowGiggle);
           break;
 
@@ -889,7 +898,7 @@
           break;
 
         case 'eggs':
-          // Physics: B10.1-4 each rotate around their perceived base.
+          kickGroup('eggs', 7);  // all 4 eggs rock
           // play(sounds.eggPercuss);
           break;
 
@@ -899,7 +908,6 @@
           break;
 
         case 'door2':
-          // B9 — three knocks, light turns on, guy opens door.
           doorKnocks++;
           // play(sounds.doorKnock);
           if (doorKnocks >= 3) doorKnocks = 0;
@@ -908,27 +916,24 @@
         case 'feet':
           if (shoesOn) {
             shoesOn = false;
-            // FBF shoe-pop animation goes here on both feet.
-            // For now: brief scale pop then settle.
-            feet.forEach(f => {
-              if (!f.el) return;
-              f.el.style.transition = 'transform 0.15s';
-              f.el.style.transform  = 'rotate(-8deg)';
-              setTimeout(() => {
-                f.el.style.transition = '';
-                f.el.style.transform  = '';
-                activateFeet();
-              }, 150);
-            });
+            kickGroup('feet', 10);  // shoes pop — big initial kick
+            activateGroup('feet');
+            // FBF shoe-pop sequence goes here.
             // play(sounds.shoePop);
           } else {
-            kickFeet();
+            kickGroup('feet', 8);
             // play(sounds.feetGiggle);
           }
           break;
 
+        case 'pullleaf':
+          kickEl('b15', 3);
+          if (!isPeeking) break;
+          showHeader();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          break;
+
         case 'door':
-          // B27 — three knocks, flash.
           doorKnocks++;
           // play(sounds.doorKnock);
           if (doorKnocks >= 3) {
@@ -948,103 +953,391 @@
 
 
     /* ═══════════════════════════════════════════════════════════
-       FEET PHYSICS
-       B26 = left foot, B26.1 = right foot.
-       Both visible from start (shoes on).
-       After shoe-pop: independent pendulum physics per foot.
+       UNIFIED SPRING PHYSICS SYSTEM
+       All physics elements share one RAF loop.
 
-       transform-origin is the perceived hip/attachment point,
-       expressed as percentages of the full canvas image.
-       FILL THESE IN once you've drawn guide dots in Krita:
-         foot.pivotX = hip_x_px / 3161 * 100  (as % string)
-         foot.pivotY = hip_y_px / 1124 * 100  (as % string)
+       Pivot values are in ELEMENT space (not canvas space).
+       Derivation: header = 5/6 of natural image height.
+       el_y = (canvas_y * 1.2 - 0.2) * 100
+       el_x = canvas_x (X unchanged — image fills width exactly)
+
+       All values extracted from physics reference PNGs via
+       pixel centroid analysis. B21_1 had no marker — add later.
     ═══════════════════════════════════════════════════════════ */
 
-    const feet = [
-      {
-        el:      g('b26'),
-        pivotX:  '87%',   // ← replace with eyedropped hip X from Krita guide dot
-        pivotY:  '72%',   // ← replace with eyedropped hip Y from Krita guide dot
-        angle:   0, vel: 0,
-        restAngle: -3,    // idle lean (degrees) — tune to taste
-        active:  false,
-      },
-      {
-        el:      g('b26-1'),
-        pivotX:  '89%',   // ← replace with eyedropped hip X from Krita guide dot
-        pivotY:  '72%',   // ← replace with eyedropped hip Y from Krita guide dot
-        angle:   0, vel: 0,
-        restAngle: 3,
-        active:  false,
-      },
+    const springEls = [
+      // B15 — pull-down leaf branch (pivot = top of branch where it meets header)
+      { id:'b15',   ox:'55.64%', oy:'18.38%', k:0.025, d:0.93, rest:0,  group:'pullleaf', maxKick:4  },
+
+      // B10 — eggs rock around their base (pivot = bottom of each egg)
+      { id:'b10-1', ox:'32.82%', oy:'12.77%', k:0.09,  d:0.78, rest:0,  group:'eggs',     maxKick:8  },
+      { id:'b10-2', ox:'28.76%', oy:'12.18%', k:0.09,  d:0.78, rest:0,  group:'eggs',     maxKick:8  },
+      { id:'b10-3', ox:'31.14%', oy:'13.18%', k:0.09,  d:0.78, rest:0,  group:'eggs',     maxKick:8  },
+      { id:'b10-4', ox:'26.74%', oy:'8.85%',  k:0.09,  d:0.78, rest:0,  group:'eggs',     maxKick:8  },
+
+      // B21.2 — hair dangles from skull top
+      { id:'b21-2', ox:'74.00%', oy:'10.40%', k:0.04,  d:0.90, rest:0,  group:'guy',      maxKick:6  },
+
+      // B21.1 — guy body rocks from perceived centre of mass
+      { id:'b21-1', ox:'69.22%', oy:'24.96%', k:0.05,  d:0.88, rest:0,  group:'guy',      maxKick:4  },
+
+      // B1 — whole leaf cluster (individual leaf pivots added when B1.1-15 ready)
+      { id:'b1',    ox:'1.09%',  oy:'13.36%', k:0.07,  d:0.83, rest:0,  group:'leaves',   maxKick:5  },
+
+      // B26/B26.1 — left and right feet (independent hips)
+      { id:'b26',   ox:'85.78%', oy:'68.86%', k:0.04,  d:0.88, rest:-3, group:'feet',     maxKick:10 },
+      { id:'b26-1', ox:'87.28%', oy:'69.24%', k:0.04,  d:0.88, rest:3,  group:'feet',     maxKick:10 },
+
+      // B11.2 jaw — pivot is the hinge point
+      // Physics: driven by FBF, pivot just registers where the hinge is.
+      { id:'b11-2', ox:'36.58%', oy:'39.16%', k:0.12,  d:0.75, rest:0,  group:'bird1',    maxKick:6  },
+
+      // B17.3 jaw — same
+      { id:'b17-3', ox:'56.72%', oy:'66.65%', k:0.12,  d:0.75, rest:0,  group:'bird2',    maxKick:6  },
+
+      // B21.1 — reference missing, add pivot once guide dot is exported
+      // { id:'b21-1', ox:'?%', oy:'?%', k:0.05, d:0.88, rest:0, group:'guy', maxKick:5 },
     ];
 
-    // Apply pivot to each foot element
-    feet.forEach(f => {
-      if (!f.el) return;
-      f.el.style.transformOrigin = `${f.pivotX} ${f.pivotY}`;
-      f.el.style.willChange      = 'transform';
+    // Attach state to each element
+    springEls.forEach(s => {
+      s.el    = g(s.id);
+      s.angle = s.rest;
+      s.vel   = 0;
+      s.on    = false;
+      if (s.el) {
+        s.el.style.transformOrigin = `${s.ox} ${s.oy}`;
+        s.el.style.willChange      = 'transform';
+      }
     });
 
-    // Pendulum spring — runs only when feet are active (after shoe-pop)
-    const FOOT_SPRING  = 0.04;
-    const FOOT_DAMPING = 0.88;
-    let   footRafId    = null;
+    let physRaf = null;
 
-    function tickFeet() {
-      let anyMoving = false;
-      feet.forEach(f => {
-        if (!f.el || !f.active) return;
-        f.vel += (f.restAngle - f.angle) * FOOT_SPRING;
-        f.vel *= FOOT_DAMPING;
-        f.angle += f.vel;
-        f.el.style.transform = `rotate(${f.angle}deg)`;
-        if (Math.abs(f.vel) > 0.05) anyMoving = true;
+    function tickPhysics() {
+      let anyActive = false;
+      springEls.forEach(s => {
+        if (!s.el || !s.on) return;
+        s.vel += (s.rest - s.angle) * s.k;
+        s.vel *= s.d;
+        s.angle += s.vel;
+        s.el.style.transform = `rotate(${s.angle}deg)`;
+        if (Math.abs(s.vel) > 0.04 || Math.abs(s.angle - s.rest) > 0.05) anyActive = true;
+        else s.on = false;
       });
-      footRafId = anyMoving ? requestAnimationFrame(tickFeet) : null;
+      physRaf = anyActive ? requestAnimationFrame(tickPhysics) : null;
     }
 
-    function kickFeet() {
-      // Called on mouse-over bad teeth guy — random kick
-      feet.forEach(f => {
-        if (!f.active) return;
-        f.vel += (Math.random() - 0.5) * 6;
-        if (!footRafId) footRafId = requestAnimationFrame(tickFeet);
+    function kickGroup(group, force) {
+      // Kick all elements in a group with optional random variation
+      springEls.forEach(s => {
+        if (s.group !== group || !s.el) return;
+        const f = (force || 4) * (0.7 + Math.random() * 0.6);
+        s.vel  += (Math.random() > 0.5 ? 1 : -1) * Math.min(f, s.maxKick);
+        s.on    = true;
       });
+      if (!physRaf) physRaf = requestAnimationFrame(tickPhysics);
     }
 
-    function activateFeet() {
-      feet.forEach(f => { if (f.el) f.active = true; });
-      if (!footRafId) footRafId = requestAnimationFrame(tickFeet);
+    function kickEl(id, force) {
+      const s = springEls.find(e => e.id === id);
+      if (!s || !s.el) return;
+      s.vel += force;
+      s.on   = true;
+      if (!physRaf) physRaf = requestAnimationFrame(tickPhysics);
     }
 
-    // Mouse interaction — nudge feet when cursor is near
+    function activateGroup(group) {
+      springEls.forEach(s => { if (s.group === group && s.el) s.on = true; });
+      if (!physRaf) physRaf = requestAnimationFrame(tickPhysics);
+    }
+
+    // Mouse proximity — nudge elements when cursor passes near their pivot
     header.addEventListener('mousemove', e => {
-      feet.forEach(f => {
-        if (!f.el || !f.active) return;
-        // Convert pivot % to canvas px then to screen coords
-        const { cx: px, cy: py } = screenToCanvas(
-          parseFloat(f.pivotX) / 100 * header.offsetWidth,
-          parseFloat(f.pivotY) / 100 * header.offsetHeight
-        );
-        const rect = header.getBoundingClientRect();
-        const mx   = e.clientX - rect.left;
-        const my   = e.clientY - rect.top;
-        const { cx, cy } = screenToCanvas(mx, my);
-        const dx = cx - px * CANVAS_W / 100;
-        const dy = cy - py * CANVAS_H / 100;
+      const rect = header.getBoundingClientRect();
+      const mx   = e.clientX - rect.left;
+      const my   = e.clientY - rect.top;
+      const hw   = header.offsetWidth;
+      const hh   = header.offsetHeight;
+
+      springEls.forEach(s => {
+        if (!s.el) return;
+        // Pivot position in screen pixels
+        const px   = parseFloat(s.ox) / 100 * hw;
+        const py   = parseFloat(s.oy) / 100 * hh;
+        const dx   = mx - px;
+        const dy   = my - py;
         const dist = Math.sqrt(dx*dx + dy*dy);
-        if (dist < 200) {  // influence radius in canvas px
-          f.vel += (dx / dist) * 1.5 * (1 - dist / 200);
-          if (!footRafId) footRafId = requestAnimationFrame(tickFeet);
+        const R    = 80; // influence radius px
+        if (dist < R) {
+          const strength = (1 - dist / R) * 1.5;
+          s.vel += (dx / (dist || 1)) * strength;
+          s.on   = true;
+          if (!physRaf) physRaf = requestAnimationFrame(tickPhysics);
         }
       });
     });
 
+    // Expose kickGroup/kickEl for action handlers
+    window._kick = { group: kickGroup, el: kickEl, activate: activateGroup };
+
 
     /* ═══════════════════════════════════════════════════════════
-       DEV HELPERS
+       B15 — CANVAS VINE RENDERER
+       The vine PNG (B15) is hidden visually and replaced by a
+       Verlet rope simulation drawn on a canvas overlay.
+
+       Architecture:
+       - 6 pin positions from reference PNG (fixed anchor nodes)
+       - Free nodes distributed between and below the pins
+       - Verlet integration with gravity + distance constraints
+       - Mouse cursor applies lateral force to nearby nodes
+       - Drawn as a smooth bezier curve in ink style
+
+       The vine canvas extends 60% below the header so the rope
+       hangs into the peek strip when the banner is tucked away.
+
+       TO TUNE:
+         VINE_GRAVITY  — how fast nodes fall (heavier vine = higher)
+         VINE_DAMPING  — energy loss per frame (higher = settles faster)
+         VINE_SEGMENTS — rope resolution (more = smoother)
+         VINE_MOUSE_R  — mouse influence radius in screen px
+         VINE_STROKE   — line thickness
     ═══════════════════════════════════════════════════════════ */
+
+    const VINE_GRAVITY  = 0.25;
+    const VINE_DAMPING  = 0.985;
+    const VINE_SEGMENTS = 24;
+    const VINE_ITERS    = 8;
+    const VINE_MOUSE_R  = 80;
+    const VINE_STROKE   = 2.8;
+
+    // Pin positions from B15 reference PNG — canvas fraction coords (0-1)
+    // Sorted top to bottom
+    const vinePins = [
+      { x: 0.5564, y: 0.3198 },
+      { x: 0.5826, y: 0.3556 },
+      { x: 0.5272, y: 0.3723 },
+      { x: 0.5940, y: 0.4556 },
+      { x: 0.5944, y: 0.4720 },
+      { x: 0.5757, y: 0.6101 },
+    ];
+
+    // Create vine canvas — extends 60% below header for peek visibility
+    const vineCanvas     = document.createElement('canvas');
+    vineCanvas.id        = 'vine-canvas';
+    vineCanvas.style.cssText = [
+      'position:absolute',
+      'top:0',
+      'left:0',
+      'width:100%',
+      'height:160%',           // extends below header
+      'pointer-events:none',
+      'z-index:50',
+    ].join(';');
+    header.appendChild(vineCanvas);
+    const vineCtx = vineCanvas.getContext('2d');
+
+    // Hide the B15 PNG — canvas replaces it visually.
+    // Keep it in the DOM for alpha hit testing.
+    const b15img = g('b15');
+    if (b15img) b15img.style.opacity = '0';
+
+    // Convert canvas fraction → vine canvas pixel coords
+    // Vine canvas element = same width as header, 160% height
+    function canvasFracToVine(cx, cy) {
+      const hw     = header.offsetWidth;
+      const hh     = header.offsetHeight;
+      const scale  = hw / CANVAS_W;
+      const scaledH = CANVAS_H * scale;
+      const offsetY = hh - scaledH;           // negative (image overflows top)
+      return {
+        x: cx * hw,
+        y: cy * scaledH + offsetY,
+      };
+    }
+
+    let vineNodes = [];
+    let vineSegLen = 0;
+
+    function buildVine() {
+      vineCanvas.width  = header.offsetWidth;
+      vineCanvas.height = header.offsetHeight * 1.6;
+
+      // Topmost and bottommost pins in screen coords
+      const topPt = canvasFracToVine(vinePins[0].x, vinePins[0].y);
+      const botPt = canvasFracToVine(vinePins[vinePins.length - 1].x, vinePins[vinePins.length - 1].y);
+
+      // Rope extends from top pin to 30% below the header bottom
+      const extendY = header.offsetHeight * 1.3;
+      const avgX    = vinePins.reduce((s, p) => s + p.x, 0) / vinePins.length;
+
+      vineNodes = [];
+      for (let i = 0; i < VINE_SEGMENTS; i++) {
+        const t   = i / (VINE_SEGMENTS - 1);
+        const pt  = canvasFracToVine(avgX, vinePins[0].y + t * (0.9 - vinePins[0].y));
+        // Clamp to extendY at the bottom
+        const y   = topPt.y + t * (extendY - topPt.y);
+        const x   = topPt.x + (Math.random() - 0.5) * 2; // tiny jitter for realism
+
+        // Is this node near a pin? (within 25px)
+        const pinned = vinePins.some(p => {
+          const pp = canvasFracToVine(p.x, p.y);
+          return Math.hypot(pp.x - pt.x, pp.y - y) < 25;
+        });
+
+        vineNodes.push({ x, y, px: x, py: y, pinned });
+      }
+
+      // Always pin the topmost node
+      if (vineNodes.length > 0) vineNodes[0].pinned = true;
+
+      // Calculate natural segment length
+      vineSegLen = (extendY - topPt.y) / (VINE_SEGMENTS - 1);
+    }
+
+    buildVine();
+    window.addEventListener('resize', buildVine);
+
+    // Mouse position for vine interaction (in vine canvas coords)
+    let vineMX = null, vineMY = null;
+
+    header.addEventListener('mousemove', e => {
+      const rect = header.getBoundingClientRect();
+      vineMX = e.clientX - rect.left;
+      vineMY = e.clientY - rect.top;
+    });
+
+    header.addEventListener('mouseleave', () => {
+      vineMX = null;
+      vineMY = null;
+    });
+
+    // Public: disturb vine on interaction
+    function kickVine(force) {
+      const mid = Math.floor(vineNodes.length / 2);
+      for (let i = mid; i < vineNodes.length; i++) {
+        if (!vineNodes[i].pinned) {
+          vineNodes[i].x += (Math.random() - 0.5) * force * 2;
+        }
+      }
+    }
+
+    let vineRafId = null;
+
+    function tickVine() {
+      vineCtx.clearRect(0, 0, vineCanvas.width, vineCanvas.height);
+
+      let anyMoving = false;
+
+      // Verlet integration
+      vineNodes.forEach(n => {
+        if (n.pinned) return;
+        const vx = (n.x - n.px) * VINE_DAMPING;
+        const vy = (n.y - n.py) * VINE_DAMPING;
+        n.px = n.x; n.py = n.y;
+        n.x += vx;
+        n.y += vy + VINE_GRAVITY;
+        if (Math.abs(vx) > 0.05 || Math.abs(vy) > 0.05) anyMoving = true;
+      });
+
+      // Mouse influence — lateral push only (y is mostly gravity-driven)
+      if (vineMX !== null) {
+        vineNodes.forEach(n => {
+          if (n.pinned) return;
+          const dx   = n.x - vineMX;
+          const dy   = n.y - vineMY;
+          const dist = Math.hypot(dx, dy);
+          if (dist < VINE_MOUSE_R && dist > 0) {
+            const f = (1 - dist / VINE_MOUSE_R) * 2.5;
+            n.x += (dx / dist) * f;
+            anyMoving = true;
+          }
+        });
+      }
+
+      // Distance constraints + pin enforcement
+      for (let iter = 0; iter < VINE_ITERS; iter++) {
+        for (let i = 0; i < vineNodes.length - 1; i++) {
+          const a = vineNodes[i], b = vineNodes[i + 1];
+          const dx   = b.x - a.x, dy = b.y - a.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const diff = (dist - vineSegLen) / dist * 0.5;
+          if (!a.pinned) { a.x += dx * diff; a.y += dy * diff; }
+          if (!b.pinned) { b.x -= dx * diff; b.y -= dy * diff; }
+        }
+
+        // Re-enforce pin positions
+        vinePins.forEach(p => {
+          const pp   = canvasFracToVine(p.x, p.y);
+          const near = vineNodes.find(n =>
+            n.pinned && Math.hypot(n.x - pp.x, n.y - pp.y) < 30
+          );
+          if (near) { near.x = pp.x; near.y = pp.y; }
+        });
+        if (vineNodes[0]) {
+          const tp = canvasFracToVine(vinePins[0].x, vinePins[0].y);
+          vineNodes[0].x = tp.x; vineNodes[0].y = tp.y;
+        }
+      }
+
+      // Draw vine as smooth bezier
+      if (vineNodes.length > 1) {
+        vineCtx.save();
+        vineCtx.strokeStyle = '#0D0B08';
+        vineCtx.lineWidth   = VINE_STROKE;
+        vineCtx.lineCap     = 'round';
+        vineCtx.lineJoin    = 'round';
+        vineCtx.globalAlpha = 0.92;
+        vineCtx.beginPath();
+        vineCtx.moveTo(vineNodes[0].x, vineNodes[0].y);
+
+        for (let i = 1; i < vineNodes.length - 1; i++) {
+          const mx = (vineNodes[i].x + vineNodes[i + 1].x) / 2;
+          const my = (vineNodes[i].y + vineNodes[i + 1].y) / 2;
+          vineCtx.quadraticCurveTo(vineNodes[i].x, vineNodes[i].y, mx, my);
+        }
+        vineCtx.lineTo(
+          vineNodes[vineNodes.length - 1].x,
+          vineNodes[vineNodes.length - 1].y
+        );
+        vineCtx.stroke();
+
+        // Draw a small leaf cluster at the bottom of the vine
+        const tip  = vineNodes[vineNodes.length - 1];
+        const stem = vineNodes[vineNodes.length - 3];
+        const angle = Math.atan2(tip.y - stem.y, tip.x - stem.x);
+
+        vineCtx.beginPath();
+        // Small oval leaf shape
+        vineCtx.ellipse(
+          tip.x + Math.cos(angle) * 8,
+          tip.y + Math.sin(angle) * 8,
+          6, 10, angle, 0, Math.PI * 2
+        );
+        vineCtx.fillStyle = '#0D0B08';
+        vineCtx.fill();
+        vineCtx.restore();
+      }
+
+      vineRafId = anyMoving || vineMX !== null
+        ? requestAnimationFrame(tickVine)
+        : null;
+    }
+
+    // Start vine on first mousemove over header
+    header.addEventListener('mousemove', () => {
+      if (!vineRafId) vineRafId = requestAnimationFrame(tickVine);
+    }, { once: false });
+
+    // Kick vine when pulled
+    const origKickEl = kickEl;
+    function kickElWithVine(id, force) {
+      origKickEl(id, force);
+      if (id === 'b15') kickVine(force * 4);
+    }
+
+    // Also run vine RAF always (settles naturally, cheap when still)
+    vineRafId = requestAnimationFrame(tickVine);
     window.ELUE = {
       masks: () => interactiveLayers.forEach(l =>
         console.log(l.action, l.maskCtx ? '✓' : '✗ (no mask — image may be 404 or not loaded)')
