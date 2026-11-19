@@ -1,0 +1,17 @@
+---
+layout: default
+title: Personal work
+nav: personal
+description: Sean Harper's own music and projects, released as Elue.
+---
+      <h1>Personal work</h1>
+      <p class="lede">{{ site.data.text.personal_intro | escape }}</p>
+{% for w in site.data.personal %}
+      <article class="work">
+        <h2><span>{{ w.title | escape }}</span>{% if w.year and w.year != '' %} <span class="year">{{ w.year | escape }}</span>{% endif %}</h2>
+        <p>{{ w.description | escape }}</p>
+        {%- if w.link_url and w.link_url != '' %}
+        <p class="go"><a href="{{ w.link_url | escape }}">{{ w.link_label | default: 'Listen or watch' | escape }}</a></p>
+        {%- endif %}
+      </article>
+{% endfor %}

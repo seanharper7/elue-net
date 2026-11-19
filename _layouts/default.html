@@ -15,17 +15,29 @@
   <meta property="og:description" content="{{ page.description | escape }}">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://elue.net{{ page.url | replace: 'index.html', '' }}">
+  {%- if site_info.logo and site_info.logo != '' %}
+  <link rel="icon" href="{{ site_info.logo | escape }}">
+  {%- else %}
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3C/svg%3E">
+  {%- endif %}
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <div class="page">
     <header class="masthead">
-      <p class="name"><a href="/">{{ site_info.name | escape }}</a></p>
-      <p class="role">{{ site_info.tagline | escape }}</p>
+      <div class="brand">
+        {%- if site_info.logo and site_info.logo != '' %}
+        <a class="logo" href="/"><img src="{{ site_info.logo | escape }}" alt="{{ site_info.name | escape }}" width="64" height="64"></a>
+        {%- endif %}
+        <div>
+          <p class="name"><a href="/">{{ site_info.name | escape }}</a></p>
+          <p class="role">{{ site_info.tagline | escape }}</p>
+        </div>
+      </div>
       <nav aria-label="Main">
         <ul>
           <li><a href="/"{% if page.nav == 'work' %} aria-current="page"{% endif %}>Work</a></li>
+          <li><a href="/personal.html"{% if page.nav == 'personal' %} aria-current="page"{% endif %}>Personal work</a></li>
           <li><a href="/services.html"{% if page.nav == 'services' %} aria-current="page"{% endif %}>Services</a></li>
           <li><a href="/about.html"{% if page.nav == 'about' %} aria-current="page"{% endif %}>About</a></li>
           <li><a href="/contact.html"{% if page.nav == 'contact' %} aria-current="page"{% endif %}>Contact</a></li>

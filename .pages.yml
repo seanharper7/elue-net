@@ -4,7 +4,7 @@
 media:
   input: media
   output: /media
-  categories: [document]
+  categories: [document, image]
   rename: false
 
 content:
@@ -63,6 +63,32 @@ content:
         label: Link address
         type: string
         description: The full web address, starting with https://
+
+  - name: personal
+    label: Personal work (its own page)
+    type: file
+    path: _data/personal.yml
+    format: yaml
+    list: true
+    fields:
+      - name: title
+        label: Title
+        type: string
+        required: true
+      - name: year
+        label: Year (optional)
+        type: string
+      - name: description
+        label: One or two lines about it
+        type: text
+      - name: link_label
+        label: Link text
+        type: string
+        description: For example "Listen on Bandcamp" or "Watch on YouTube".
+      - name: link_url
+        label: Link address
+        type: string
+        description: The full web address, starting with https://. Leave empty for no link.
 
   - name: services
     label: Services
@@ -127,12 +153,15 @@ content:
       - name: services_outro_link
         label: Services page, link after it
         type: string
+      - name: personal_intro
+        label: Personal work page, intro
+        type: text
       - name: contact_intro
         label: Contact page, intro
         type: text
 
   - name: site
-    label: Name, tagline, email, CV
+    label: Name, tagline, email, logo, CV
     type: file
     path: _data/site.yml
     format: yaml
@@ -146,6 +175,10 @@ content:
       - name: email
         label: Public email
         type: string
+      - name: logo
+        label: Logo (small picture next to your name)
+        type: image
+        description: Upload a square picture. Clear the field to show no logo.
       - name: cv
         label: CV (PDF)
         type: file

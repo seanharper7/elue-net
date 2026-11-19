@@ -46,6 +46,11 @@ a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
 
 /* ---- Header ---- */
 .masthead { margin-bottom: 2.5rem; }
+.brand { display: flex; align-items: center; gap: 1rem; }
+.logo { display: block; flex: none; line-height: 0; }
+.logo img { width: 4rem; height: 4rem; object-fit: cover; display: block; }
+/* To make the logo black and white, uncomment the next line. */
+/* .logo img { filter: grayscale(1); } */
 .name { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; margin: 0; }
 .name a { text-decoration: none; }
 .role { margin: 0.25rem 0 0; color: var(--quiet); }
