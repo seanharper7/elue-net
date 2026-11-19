@@ -9,9 +9,28 @@ description: Sean Harper's own music and projects, released as Elue.
 {% for w in site.data.personal %}
       <article class="work">
         <h2><span>{{ w.title | escape }}</span>{% if w.year and w.year != '' %} <span class="year">{{ w.year | escape }}</span>{% endif %}</h2>
+        {%- if w.description and w.description != '' %}
         <p>{{ w.description | escape }}</p>
+        {%- endif %}
         {%- if w.link_url and w.link_url != '' %}
         <p class="go"><a href="{{ w.link_url | escape }}">{{ w.link_label | default: 'Listen or watch' | escape }}</a></p>
         {%- endif %}
       </article>
 {% endfor %}
+{% if site.data.youtube and site.data.youtube.size > 0 %}
+      <p class="section-label">{{ site.data.text.youtube_heading | default: 'From my YouTube channel' | escape }}</p>
+{% for v in site.data.youtube %}
+      <article class="work">
+        <h2><span>{{ v.title | escape }}</span>{% if v.year and v.year != '' %} <span class="year">{{ v.year | escape }}</span>{% endif %}</h2>
+        {%- if v.description and v.description != '' %}
+        <p>{{ v.description | escape }}</p>
+        {%- endif %}
+        {%- if v.link_url and v.link_url != '' %}
+        <p class="go"><a href="{{ v.link_url | escape }}">{{ v.link_label | default: 'Watch on YouTube' | escape }}</a></p>
+        {%- endif %}
+      </article>
+{% endfor %}
+{%- if site.data.text.youtube_channel_url and site.data.text.youtube_channel_url != '' %}
+      <p class="go"><a href="{{ site.data.text.youtube_channel_url | escape }}">{{ site.data.text.youtube_channel_label | default: 'More on my YouTube channel' | escape }}</a></p>
+{%- endif %}
+{% endif %}

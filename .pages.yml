@@ -90,6 +90,32 @@ content:
         type: string
         description: The full web address, starting with https://. Leave empty for no link.
 
+  - name: youtube
+    label: YouTube highlights (Personal work page)
+    type: file
+    path: _data/youtube.yml
+    format: yaml
+    list: true
+    fields:
+      - name: title
+        label: Title
+        type: string
+        required: true
+      - name: year
+        label: Year (optional)
+        type: string
+      - name: description
+        label: One line about it (optional)
+        type: text
+      - name: link_label
+        label: Link text
+        type: string
+        description: For example "Watch on YouTube".
+      - name: link_url
+        label: Video address
+        type: string
+        description: The full web address of the video, starting with https://
+
   - name: services
     label: Services
     type: group
@@ -156,6 +182,15 @@ content:
       - name: personal_intro
         label: Personal work page, intro
         type: text
+      - name: youtube_heading
+        label: Personal work page, YouTube section heading
+        type: string
+      - name: youtube_channel_label
+        label: Personal work page, link text to the channel
+        type: string
+      - name: youtube_channel_url
+        label: Personal work page, channel address
+        type: string
       - name: contact_intro
         label: Contact page, intro
         type: text
