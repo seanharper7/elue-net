@@ -26,9 +26,6 @@
   <div class="page">
     <header class="masthead">
       <div class="brand">
-        {%- if site_info.logo and site_info.logo != '' %}
-        <a class="logo" href="/"><img src="{{ site_info.logo | escape }}" alt="{{ site_info.name | escape }}" width="64" height="64"></a>
-        {%- endif %}
         <div>
           <p class="name"><a href="/">{{ site_info.name | escape }}</a></p>
           <p class="role">{{ site_info.tagline | escape }}</p>

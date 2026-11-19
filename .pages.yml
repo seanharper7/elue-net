@@ -161,7 +161,7 @@ content:
         type: text
 
   - name: site
-    label: Name, tagline, email, logo, CV
+    label: Name, tagline, email, tab icon, CV
     type: file
     path: _data/site.yml
     format: yaml
@@ -176,9 +176,9 @@ content:
         label: Public email
         type: string
       - name: logo
-        label: Logo (small picture next to your name)
+        label: Tab icon (the small picture in the browser tab)
         type: image
-        description: Upload a square picture. Clear the field to show no logo.
+        description: Upload a square picture. It only appears in the browser tab, not on the page. Clear the field for a plain black square.
       - name: cv
         label: CV (PDF)
         type: file
