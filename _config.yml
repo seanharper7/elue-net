@@ -1,0 +1,9 @@
+# elue.net — built by GitHub Pages (Jekyll). Text lives in _data/, edited through Pages CMS (.pages.yml).
+title: Sean Harper
+url: https://elue.net
+# Keep the big art folder out of the published site (the old draft's Krita files, 2 GB+).
+exclude:
+  - assets
+  - README.md
+  - .DS_Store
+  - node_modules

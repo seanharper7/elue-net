@@ -1,0 +1,154 @@
+# Pages CMS config for elue.net: the forms you see at app.pagescms.org.
+# Each entry edits one data file in _data/. Order inside a list = order on the site.
+
+media:
+  input: media
+  output: /media
+  categories: [document]
+  rename: false
+
+content:
+  - name: featured
+    label: Featured piece (top of Work)
+    type: file
+    path: _data/featured.yml
+    format: yaml
+    fields:
+      - name: title
+        label: Title
+        type: string
+        required: true
+      - name: year
+        label: Year
+        type: string
+      - name: description
+        label: One line about it
+        type: text
+      - name: video_service
+        label: Where the video is
+        type: select
+        options:
+          values:
+            - name: vimeo
+              label: Vimeo
+            - name: youtube
+              label: YouTube
+      - name: video_id
+        label: Video ID
+        type: string
+        description: "Vimeo: the number after vimeo.com/ (vimeo.com/1232115012 is 1232115012). YouTube: the letters after v= in the link. Leave empty to show no video."
+
+  - name: work
+    label: More work (list under the featured piece)
+    type: file
+    path: _data/work.yml
+    format: yaml
+    list: true
+    fields:
+      - name: title
+        label: Title
+        type: string
+        required: true
+      - name: year
+        label: Year
+        type: string
+      - name: description
+        label: One or two lines about it
+        type: text
+      - name: link_label
+        label: Link text
+        type: string
+        description: For example "Listen on Bandcamp" or "Watch on YouTube".
+      - name: link_url
+        label: Link address
+        type: string
+        description: The full web address, starting with https://
+
+  - name: services
+    label: Services
+    type: group
+    items:
+      - name: services-list
+        label: The four services
+        type: file
+        path: _data/services.yml
+        format: yaml
+        list: true
+        fields:
+          - name: title
+            label: Service
+            type: string
+            required: true
+          - name: description
+            label: One line about it
+            type: text
+      - name: steps
+        label: How a project runs (steps)
+        type: file
+        path: _data/steps.yml
+        format: yaml
+        list: true
+        fields:
+          - name: lead
+            label: Bold opening (for example "We talk.")
+            type: string
+            required: true
+          - name: text
+            label: The rest of the sentence
+            type: text
+
+  - name: credits
+    label: Credits (About page)
+    type: file
+    path: _data/credits.yml
+    format: yaml
+    list: true
+    fields:
+      - name: project
+        label: Project and who it was for
+        type: string
+        required: true
+      - name: role
+        label: What you did
+        type: string
+
+  - name: text
+    label: Page text (About, Services, Contact)
+    type: file
+    path: _data/text.yml
+    format: yaml
+    fields:
+      - name: about_intro
+        label: About page, intro
+        type: text
+      - name: services_outro
+        label: Services page, closing sentence
+        type: string
+      - name: services_outro_link
+        label: Services page, link after it
+        type: string
+      - name: contact_intro
+        label: Contact page, intro
+        type: text
+
+  - name: site
+    label: Name, tagline, email, CV
+    type: file
+    path: _data/site.yml
+    format: yaml
+    fields:
+      - name: name
+        label: Name
+        type: string
+      - name: tagline
+        label: Line under the name
+        type: string
+      - name: email
+        label: Public email
+        type: string
+      - name: cv
+        label: CV (PDF)
+        type: file
+        description: Upload a new PDF to replace it. Clear the field to hide the CV link.
+        options:
+          extensions: [pdf]

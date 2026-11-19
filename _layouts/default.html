@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {%- assign site_info = site.data.site %}
+  {%- if page.title %}
+  {%- capture full_title %}{{ page.title }} — {{ site_info.name }}{% endcapture %}
+  {%- else %}
+  {%- capture full_title %}{{ site_info.name }} — {{ site_info.tagline }}{% endcapture %}
+  {%- endif %}
+  <title>{{ full_title | escape }}</title>
+  <meta name="description" content="{{ page.description | escape }}">
+  <meta property="og:title" content="{{ full_title | escape }}">
+  <meta property="og:description" content="{{ page.description | escape }}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://elue.net{{ page.url | replace: 'index.html', '' }}">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="page">
+    <header class="masthead">
+      <p class="name"><a href="/">{{ site_info.name | escape }}</a></p>
+      <p class="role">{{ site_info.tagline | escape }}</p>
+      <nav aria-label="Main">
+        <ul>
+          <li><a href="/"{% if page.nav == 'work' %} aria-current="page"{% endif %}>Work</a></li>
+          <li><a href="/services.html"{% if page.nav == 'services' %} aria-current="page"{% endif %}>Services</a></li>
+          <li><a href="/about.html"{% if page.nav == 'about' %} aria-current="page"{% endif %}>About</a></li>
+          <li><a href="/contact.html"{% if page.nav == 'contact' %} aria-current="page"{% endif %}>Contact</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+{{ content }}
+    </main>
+{% unless page.footer == false %}
+    <footer>
+      <p>To hire me: <a href="mailto:{{ site_info.email | escape }}">{{ site_info.email | escape }}</a></p>
+    </footer>
+{% endunless %}
+  </div>
+</body>
+</html>

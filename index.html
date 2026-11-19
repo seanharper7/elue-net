@@ -1,68 +1,40 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sean Harper — composer, sound designer, producer</title>
-  <meta name="description" content="Sean Harper is a composer, sound designer and producer. Scoring for short films and animation, sound design, producing independent artists, and dialogue editing.">
-  <meta property="og:title" content="Sean Harper — composer, sound designer, producer">
-  <meta property="og:description" content="Scoring for short films and animation, sound design, producing independent artists, and dialogue editing.">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://elue.net/">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <div class="page">
-    <header class="masthead">
-      <p class="name"><a href="index.html">Sean Harper</a></p>
-      <p class="role">composer, sound designer, producer</p>
-      <nav aria-label="Main">
-        <ul>
-          <li><a href="index.html" aria-current="page">Work</a></li>
-          <li><a href="services.html">Services</a></li>
-          <li><a href="about.html">About</a></li>
-          <li><a href="contact.html">Contact</a></li>
-        </ul>
-      </nav>
-    </header>
-
-    <main>
-      <!-- Featured piece. To swap it, change the Vimeo number in the src (or use a YouTube embed link) and the text below. -->
+---
+layout: default
+nav: work
+description: Sean Harper is a composer, sound designer and producer. Scoring for short films and animation, sound design, producing independent artists, and dialogue editing.
+---
+{%- assign f = site.data.featured %}
+{%- assign has_video = false %}
+{%- if f.video_id and f.video_id != '' %}{% assign has_video = true %}{% endif %}
       <section class="feature" aria-labelledby="feature-title">
+        {%- if has_video %}
+        {%- if f.video_service == 'youtube' %}
+        {%- capture embed_src %}https://www.youtube-nocookie.com/embed/{{ f.video_id }}{% endcapture %}
+        {%- capture watch_url %}https://www.youtube.com/watch?v={{ f.video_id }}{% endcapture %}
+        {%- assign watch_label = 'Watch on YouTube' %}
+        {%- else %}
+        {%- capture embed_src %}https://player.vimeo.com/video/{{ f.video_id }}{% endcapture %}
+        {%- capture watch_url %}https://vimeo.com/{{ f.video_id }}{% endcapture %}
+        {%- assign watch_label = 'Watch on Vimeo' %}
+        {%- endif %}
         <div class="video">
-          <iframe src="https://player.vimeo.com/video/1232115012" title="GIRAF22 Promo, score and sound design" loading="lazy" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+          <iframe src="{{ embed_src }}" title="{{ f.title | escape }}" loading="lazy" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
         </div>
-        <h2 id="feature-title"><span>GIRAF22 Promo</span> <span class="year">2026</span></h2>
-        <p>Score and sound design for Jiwoo Kim's festival trailer, made for Quickdraw Animation Society's GIRAF22.</p>
-        <p class="go"><a href="https://vimeo.com/1232115012">Watch on Vimeo</a></p>
+        {%- endif %}
+        <h2 id="feature-title"><span>{{ f.title | escape }}</span> <span class="year">{{ f.year | escape }}</span></h2>
+        <p>{{ f.description | escape }}</p>
+        {%- if has_video %}
+        <p class="go"><a href="{{ watch_url }}">{{ watch_label }}</a></p>
+        {%- endif %}
       </section>
 
-      <!-- More work. To add a project, copy one <article class="work"> block and put it at the top. -->
       <p class="section-label">More work</p>
-
+{% for w in site.data.work %}
       <article class="work">
-        <h2><span>Portrait of the Issue</span> <span class="year">2026</span></h2>
-        <p>Naima's bedroom jazz pop album, written with Bella Contreras Woelfle. Co-writer, producer, pianist and sound designer, across about 20 sessions.</p>
-        <p class="go"><a href="https://naimaportrait.bandcamp.com/album/portrait-of-the-issue">Listen on Bandcamp</a></p>
+        <h2><span>{{ w.title | escape }}</span> <span class="year">{{ w.year | escape }}</span></h2>
+        <p>{{ w.description | escape }}</p>
+        {%- if w.link_url and w.link_url != '' %}
+        <p class="go"><a href="{{ w.link_url | escape }}">{{ w.link_label | default: 'Listen or watch' | escape }}</a></p>
+        {%- endif %}
       </article>
-
-      <article class="work">
-        <h2><span>Snooze Quest</span> <span class="year">2025</span></h2>
-        <p>Score and sound design for Victoria Vincent's animated short, screened as part of Adult Swim's programming.</p>
-        <p class="go"><a href="https://www.youtube.com/watch?v=CY-ZZefOhBo">Watch on YouTube</a></p>
-      </article>
-
-      <article class="work">
-        <h2><span>Dream Journal</span> <span class="year">2025</span></h2>
-        <p>Rachel Walton's folk pop album. Production, recording and post-production.</p>
-        <p class="go"><a href="https://rachelwalton.bandcamp.com/album/dream-journal">Listen on Bandcamp</a></p>
-      </article>
-    </main>
-
-    <footer>
-      <p>To hire me: <a href="mailto:contact@elue.net">contact@elue.net</a></p>
-    </footer>
-  </div>
-</body>
-</html>
+{% endfor %}
