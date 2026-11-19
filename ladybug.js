@@ -18,8 +18,8 @@
 
    Art lives in /ladybug/ (walk-0..7.png, click-0..4.png), all 64x64 and facing up.
    Everything it needs to look right is set in this file, so it doesn't depend on style.css.
-   The `sound` functions below are empty on purpose: that's where the scurrying and
-   squishing sounds will plug in later. */
+   The scurrying sound (/ladybug/walk-loop.mp3) is wired in below. The `sound` functions are still empty
+   on purpose: that's where the squish and release sounds will plug in later. */
 
 (function () {
   'use strict';
@@ -30,6 +30,55 @@
     squish: function () {},        // a click went down
     release: function () {}        // a click was let go
   };
+
+  // The scurrying sound: /ladybug/walk-loop.mp3 plays on a seamless loop while the ladybug is walking,
+  // faster and higher when it moves faster, slower and lower when it slows, and fades out when it rests.
+  // Browsers won't play sound until the visitor has clicked or pressed a key on the page, so it starts
+  // after the first click (or key press) on each page.
+  var SCURRY_URL = '/ladybug/walk-loop.mp3';
+  var SCURRY_VOLUME = 0.8;     // 0..1
+  var SCURRY_RATE_MIN = 0.5;   // slowest it ever plays (1 = the recording as it is)
+  var SCURRY_RATE_MAX = 2.4;   // fastest
+  var scurry = (function () {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC || !window.fetch) return { set: function () {} };
+    var ctx = null, gain = null, src = null, raw = null, decoding = false, buffer = null;
+    try { ctx = new AC(); gain = ctx.createGain(); gain.gain.value = 0; gain.connect(ctx.destination); } catch (e) { return { set: function () {} }; }
+    fetch(SCURRY_URL).then(function (r) { return r.arrayBuffer(); }).then(function (a) { raw = a; build(); }).catch(function () {});
+    function build() {
+      if (src || !raw || decoding || ctx.state !== 'running') return;
+      if (!buffer) {
+        decoding = true;
+        var done = function (b) { buffer = b; decoding = false; build(); };
+        var fail = function () { decoding = false; raw = null; };
+        var p = ctx.decodeAudioData(raw, done, fail);   // callback form works in older Safari too
+        if (p && p.catch) p.catch(fail);
+        return;
+      }
+      src = ctx.createBufferSource();
+      src.buffer = buffer;
+      src.loop = true;
+      src.connect(gain);
+      src.start(0);
+    }
+    function unlock() {
+      var go = function () { build(); if (ctx.state === 'running') { off(); } };
+      if (ctx.state === 'running') go(); else ctx.resume().then(go, function () {});
+    }
+    var evs = ['pointerdown', 'mousedown', 'keydown', 'touchstart'];
+    function off() { for (var i = 0; i < evs.length; i++) window.removeEventListener(evs[i], unlock, true); }
+    for (var i = 0; i < evs.length; i++) window.addEventListener(evs[i], unlock, true);
+    ctx.onstatechange = build;
+    // rate: how fast the legs are going; level: 0 = silent, 1 = full
+    return {
+      set: function (rate, level) {
+        if (!src) return;
+        var t = ctx.currentTime;
+        src.playbackRate.setTargetAtTime(Math.min(SCURRY_RATE_MAX, Math.max(SCURRY_RATE_MIN, rate)), t, 0.04);
+        gain.gain.setTargetAtTime(level * SCURRY_VOLUME, t, 0.05);
+      }
+    };
+  })();
 
   var WALK_FRAMES = 8;
   var CLICK_FRAMES = 5;
@@ -129,6 +178,7 @@
   var out = false;                  // is the ladybug on screen?
   var lastTick = 0;
   var lastInput = 0;                // when the mouse (or the page) last moved
+  var lastBx = 0, lastBy = 0, speedNow = 0;   // for the scurry sound: how fast the ladybug is moving (px per second)
 
   // wander-mode state
   var videoEl = null;               // the video the mouse is inside (none if it's just been left still)
@@ -277,8 +327,8 @@
     lastInput = now;
     if (!seen) {
       seen = true;
-      x = bx = anchorX = e.clientX;
-      y = by = anchorY = e.clientY;
+      x = bx = anchorX = lastBx = e.clientX;
+      y = by = anchorY = lastBy = e.clientY;
       sizeCanvas();
       if (ctx) document.body.appendChild(canvas);
       document.body.appendChild(bug);
@@ -413,6 +463,14 @@
       place();
       leaveSteps(bx, by, now);
       drawSteps(now);
+
+      // scurry sound: its speed follows how fast the ladybug is actually moving, smoothed so it glides
+      var mdx = bx - lastBx, mdy = by - lastBy;
+      lastBx = bx; lastBy = by;
+      if (dt > 0) speedNow += (Math.sqrt(mdx * mdx + mdy * mdy) / dt * 1000 - speedNow) * (1 - Math.exp(-dt / 120));
+      var audible = out && !pressed && !document.hidden && (legsGoing || (mode === 'follow' && moving));
+      // 85 px/s (its wandering pace) plays the recording as it is; faster scampering rises, slower slows down
+      scurry.set(0.55 + 0.5 * Math.log(1 + speedNow / 60), audible ? 1 : 0);
 
       if (mode === 'follow') {
         // legs: at most one frame per refresh, so quick movement never skips round the cycle
