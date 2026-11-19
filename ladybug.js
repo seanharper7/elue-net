@@ -5,9 +5,10 @@
    - Holding a click squishes it: frames 1-2 play once, then frames 3-4 loop until you let go.
      Releasing plays the last frame, then it goes back to walking or resting.
    - The video player is a separate page inside this one, so once the mouse is over it the page
-     can't see the mouse at all. There the ladybug can't follow, so it scrabbles around the
-     player's edge trying to get to the mouse (running, then stopping to face inward), and you
-     get the normal arrow. When the mouse comes back out, the ladybug runs over to it.
+     can't see the mouse at all. The ladybug can't follow, so it wanders aimlessly: drifting and
+     turning at random, stopping now and then, keeping off the player. You get the normal arrow
+     meanwhile. When the mouse comes back out, the ladybug runs over to it.
+   - It never fades: it's either there or it isn't.
    - It only runs on devices with a real mouse, and not for people who ask their
      system to reduce motion; those visitors keep their normal pointer.
 
@@ -20,7 +21,7 @@
   'use strict';
 
   var sound = {
-    scurryStart: function () {},   // the ladybug started scurrying (following, chasing or on the video edge)
+    scurryStart: function () {},   // the ladybug started scurrying (following, chasing or wandering)
     scurryStop: function () {},    // it came to rest
     squish: function () {},        // a click went down
     release: function () {}        // a click was let go
@@ -38,12 +39,18 @@
   var LOOP_MS = 90;            // time each of click frames 3 and 4 is shown
   var RELEASE_MS = 170;        // time the last click frame is shown
   var VIDEO_MARGIN = 14;       // how close to a video player the ladybug gives up following
-  var EDGE_GAP = 8;            // how far outside the video's border the ladybug walks
-  var EDGE_SPEED = 150;        // px per second along the border
-  var RUN_MS = [450, 1300];    // how long it runs along the border before stopping to scrabble
-  var SCRABBLE_MS = [300, 800];// how long it stops, facing the video, legs going
-  var LEG_MS = 55;             // legs: time per walk frame while squirming
   var CHASE_SPEED = 900;       // px per second when running back to the mouse
+
+  // Wandering, when the mouse is somewhere the page can't see (milliseconds, pixels)
+  var WANDER_SPEED = 85;       // px per second
+  var WANDER_TURN = 75;        // most it curves, degrees per second
+  var WALK_RANGE = [900, 2600];// how long it walks before it might stop
+  var REST_RANGE = [400, 1300];// how long it stops for
+  var REST_CHANCE = 0.55;      // how often a walk ends in a stop
+  var STEER_RANGE = [300, 900];// how often it picks a new curve
+  var KEEP_OFF = 22;           // stays this far from the video player
+  var KEEP_IN = 30;            // and this far from the edge of the window
+  var LEG_MS = 60;             // legs: time per walk frame
 
   var fine = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -61,7 +68,7 @@
   bug.id = 'ladybug';
   bug.setAttribute('aria-hidden', 'true');
   bug.style.cssText = 'position:fixed;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;' +
-    'pointer-events:none;z-index:2147483647;opacity:0;transition:opacity .12s;will-change:transform;';
+    'pointer-events:none;z-index:2147483647;opacity:0;will-change:transform;';
   var frames = { walk: [], click: [] };
   function addFrames(kind, count) {
     for (var i = 0; i < count; i++) {
@@ -89,13 +96,13 @@
   show('walk', 0);
 
   // ---- state ----
-  // mode: 'follow' = glued to the mouse; 'edge' = scrabbling round a video; 'chase' = running back to the mouse
+  // mode: 'follow' = glued to the mouse; 'wander' = the mouse is inside a video, so wandering; 'chase' = running back to the mouse
   var mode = 'follow';
   var x = 0, y = 0;                 // where the mouse last was
   var bx = 0, by = 0;               // where the ladybug is
   var seen = false;
   var anchorX = 0, anchorY = 0;     // where the heading was last measured from
-  var heading = 0, target = 0;      // degrees, 0 = facing up
+    var heading = 0, target = 0;      // degrees, 0 = facing up
   var phase = 0;                    // walk-cycle position, in frames
   var travelled = 0;                // mouse travel since the last screen refresh
   var lastMove = 0, moving = false;
@@ -103,22 +110,22 @@
   var out = false;                  // is the ladybug on screen?
   var lastTick = 0;
 
-  // edge-mode state
-  var edgeEl = null;                // the video being scrabbled around
-  var edgeS = 0;                    // distance along its border, clockwise from the top-left corner
-  var edgeDir = 1;                  // 1 = clockwise, -1 = anticlockwise
-  var edgeResting = false;          // stopped, facing the video
-  var edgeUntil = 0;
-  var legClock = 0;
+  // wander-mode state
+  var videoEl = null;               // the video the mouse is inside
+  var curve = 0;                    // how much it's turning right now (degrees per second)
+  var resting = false;              // stopped for a moment
+  var phaseUntil = 0;               // when the current walk or rest ends
+  var curveUntil = 0;               // when to pick a new curve
+  var clock = 0;                    // time in wander mode
 
-  function place() {
-    bug.style.transform = 'translate3d(' + (bx - SIZE / 2) + 'px,' + (by - SIZE / 2) + 'px,0) rotate(' + heading + 'deg)';
+  function place(ox, oy) {
+    bug.style.transform = 'translate3d(' + (bx + (ox || 0) - SIZE / 2) + 'px,' + (by + (oy || 0) - SIZE / 2) + 'px,0) rotate(' + heading + 'deg)';
   }
 
   // The normal arrow is hidden whenever the ladybug is out and standing in for it,
-  // but not while it's on a video's edge (the arrow is what you steer with there).
+  // but not while it's wandering at a video (the arrow is what you steer with there).
   function syncCursor() {
-    root.classList.toggle('ladybug-on', out && mode !== 'edge');
+    root.classList.toggle('ladybug-on', out && mode !== 'wander');
   }
 
   function setOut(on) {
@@ -134,16 +141,13 @@
     syncCursor();
   }
 
-  function rand(range) { return range[0] + Math.random() * (range[1] - range[0]); }
-
-  // The video players on the page, and the one (if any) the pointer is at or about to reach.
-  function videoAt(px, py, vx, vy) {
+  // The video player (if any) the pointer is at, within `margin` of, or about to reach.
+  function videoAt(px, py, vx, vy, margin) {
     var list = document.getElementsByTagName('iframe');
     for (var i = 0; i < list.length; i++) {
       var r = list[i].getBoundingClientRect();
       if (r.width === 0 || r.height === 0) continue;
-      var m = VIDEO_MARGIN;
-      if (px > r.left - m && px < r.right + m && py > r.top - m && py < r.bottom + m) return list[i];
+      if (px > r.left - margin && px < r.right + margin && py > r.top - margin && py < r.bottom + margin) return list[i];
       // a fast flick can jump over the margin, so also look a little ahead
       var ax = px + vx * 4, ay = py + vy * 4;
       if (ax > r.left && ax < r.right && ay > r.top && ay < r.bottom) return list[i];
@@ -151,49 +155,20 @@
     return null;
   }
 
-  // ---- walking round a video's border ----
-  function border(el) {
-    var r = el.getBoundingClientRect();
-    var g = EDGE_GAP;
-    var l = r.left - g, t = r.top - g, w = r.width + 2 * g, h = r.height + 2 * g;
-    return { l: l, t: t, w: w, h: h, len: 2 * (w + h) };
-  }
+  // ---- wandering ----
+  function rand(range) { return range[0] + Math.random() * (range[1] - range[0]); }
 
-  // Where is distance s along the border, which way does walking that way face, and which way is "into the video"?
-  function onBorder(b, s) {
-    s = ((s % b.len) + b.len) % b.len;
-    if (s < b.w) return { x: b.l + s, y: b.t, run: 90, inward: 180 };
-    s -= b.w;
-    if (s < b.h) return { x: b.l + b.w, y: b.t + s, run: 180, inward: 270 };
-    s -= b.h;
-    if (s < b.w) return { x: b.l + b.w - s, y: b.t + b.h, run: 270, inward: 0 };
-    s -= b.w;
-    return { x: b.l, y: b.t + b.h - s, run: 0, inward: 90 };
-  }
-
-  // The point on the border nearest to (px, py), as a distance along it.
-  function nearestS(b, px, py) {
-    var cx = Math.min(Math.max(px, b.l), b.l + b.w);
-    var cy = Math.min(Math.max(py, b.t), b.t + b.h);
-    var dl = cx - b.l, dr = b.l + b.w - cx, dt = cy - b.t, db = b.t + b.h - cy;
-    var m = Math.min(dl, dr, dt, db);
-    if (m === dt) return cx - b.l;
-    if (m === dr) return b.w + (cy - b.t);
-    if (m === db) return b.w + b.h + (b.l + b.w - cx);
-    return 2 * b.w + b.h + (b.t + b.h - cy);
-  }
-
-  function startEdge(el, now) {
-    var b = border(el);
-    edgeEl = el;
-    edgeS = nearestS(b, bx, by);
-    edgeDir = Math.random() < 0.5 ? 1 : -1;
-    edgeResting = false;
-    edgeUntil = now + rand(RUN_MS);
-    legClock = 0;
+  function startWander(video, now) {
+    videoEl = video;
+    resting = false;
+    clock = 0;
+    phaseUntil = rand(WALK_RANGE);
+    curveUntil = 0;
+    curve = 0;
+    target = heading;
     if (!moving) { moving = true; sound.scurryStart(); }
-    setMode('edge');
     pressed = false; releaseWanted = false;
+    setMode('wander');
   }
 
   function onMove(e) {
@@ -208,26 +183,26 @@
     var dx = e.clientX - x, dy = e.clientY - y;
     x = e.clientX; y = e.clientY;
 
+    var d = Math.sqrt(dx * dx + dy * dy);
     if (pressed && e.buttons === 0) onUp();   // the button was let go somewhere we couldn't see
 
-    var video = videoAt(x, y, dx, dy);
+    var video = videoAt(x, y, dx, dy, VIDEO_MARGIN);
     if (video) {
-      // the mouse is at or heading into a video: the ladybug can't follow, so it goes round the edge
+      // the mouse is at or heading into a video: the ladybug can't follow
       setOut(true);
-      if (mode !== 'edge' || edgeEl !== video) startEdge(video, now);
+      if (mode !== 'wander' || videoEl !== video) startWander(video, now);
       return;
     }
 
     setOut(true);
-    if (mode === 'edge') {
+    if (mode === 'wander') {
       // the mouse is back out: run to it
       setMode('chase');
-      edgeEl = null;
+      videoEl = null;
     }
 
     if (mode === 'follow') {
       bx = x; by = y;
-      var d = Math.sqrt(dx * dx + dy * dy);
       if (d > 0) {
         if (!moving) { moving = true; sound.scurryStart(); }
         lastMove = now;
@@ -263,30 +238,48 @@
     var dt = Math.min(now - lastTick, 100);
     lastTick = now;
     if (seen) {
-      var legsGoing = false;
+      var legsGoing = false, ox = 0, oy = 0;
 
-      if (mode === 'edge') {
-        if (!edgeEl || !document.documentElement.contains(edgeEl)) {
-          setMode('follow'); edgeEl = null;
+      if (mode === 'wander') {
+        if (!videoEl || !document.documentElement.contains(videoEl)) {
+          setMode('follow'); videoEl = null;
         } else {
-          var b = border(edgeEl);
-          if (now >= edgeUntil) {
-            edgeResting = !edgeResting;
-            if (edgeResting) {
-              edgeUntil = now + rand(SCRABBLE_MS);
-            } else {
-              edgeUntil = now + rand(RUN_MS);
-              if (Math.random() < 0.45) edgeDir = -edgeDir;
-            }
+          clock += dt;
+          if (clock >= phaseUntil) {                        // end of a walk or a rest
+            if (resting) { resting = false; phaseUntil = clock + rand(WALK_RANGE); }
+            else if (Math.random() < REST_CHANCE) { resting = true; phaseUntil = clock + rand(REST_RANGE); }
+            else phaseUntil = clock + rand(WALK_RANGE);
           }
-          if (!edgeResting) edgeS += edgeDir * EDGE_SPEED * dt / 1000;
-          var p = onBorder(b, edgeS);
-          bx = p.x; by = p.y;
-          // running: face the way it's walking; resting: face the video
-          target = edgeResting ? p.inward : (edgeDir > 0 ? p.run : (p.run + 180) % 360);
-          legsGoing = true;
-          legClock += dt;
-          phase = legClock / LEG_MS;
+          if (clock >= curveUntil) {                        // pick a new gentle curve
+            curve = (Math.random() * 2 - 1) * WANDER_TURN;
+            curveUntil = clock + rand(STEER_RANGE);
+          }
+          if (!resting) {
+            target += curve * dt / 1000;
+            // keep off the video player and inside the window: steer away or back in
+            var r = videoEl.getBoundingClientRect();
+            var W = window.innerWidth, H = window.innerHeight;
+            var near = bx > r.left - KEEP_OFF && bx < r.right + KEEP_OFF && by > r.top - KEEP_OFF && by < r.bottom + KEEP_OFF;
+            var edge = bx < KEEP_IN || by < KEEP_IN || bx > W - KEEP_IN || by > H - KEEP_IN;
+            var gx = null, gy = null;
+            if (near) {
+              var ccx = (r.left + r.right) / 2, ccy = (r.top + r.bottom) / 2;
+              gx = bx - ccx; gy = by - ccy;                  // away from the video's middle
+            } else if (edge) {
+              gx = W / 2 - bx; gy = H / 2 - by;              // toward the middle of the window
+            }
+            if (gx !== null) {
+              var away = Math.atan2(gx, -gy) * 180 / Math.PI;
+              var turn = ((away - target + 540) % 360) - 180;
+              target += turn * (1 - Math.exp(-dt / 120));
+            }
+            // walk the way it's facing
+            var hr = heading * Math.PI / 180, step = WANDER_SPEED * dt / 1000;
+            bx += Math.sin(hr) * step;
+            by -= Math.cos(hr) * step;
+            phase += dt / LEG_MS;
+            legsGoing = true;
+          }
         }
       } else if (mode === 'chase') {
         var cx = x - bx, cy = y - by;
@@ -309,7 +302,7 @@
       // turn the head the short way round, at the same speed whatever the screen refresh rate
       var diff = ((target - heading + 540) % 360) - 180;
       heading = Math.abs(diff) < 0.3 ? target : heading + diff * (1 - Math.exp(-dt / TURN_MS));
-      place();
+      place(ox, oy);
 
       if (mode === 'follow') {
         // legs: at most one frame per refresh, so quick movement never skips round the cycle
@@ -325,27 +318,28 @@
       }
 
       if (pressed && mode === 'follow') {
-        var t = now - pressAt;
+        var pt = now - pressAt;
         var leadIn = LEAD_IN_MS * 2;
-        if (releaseWanted && t >= leadIn) {
+        if (releaseWanted && pt >= leadIn) {
           pressed = false;
           releaseWanted = false;
           releaseAt = now;
           sound.release();
           show('click', 4);
-        } else if (t < LEAD_IN_MS) {
+        } else if (pt < LEAD_IN_MS) {
           show('click', 0);
-        } else if (t < leadIn) {
+        } else if (pt < leadIn) {
           show('click', 1);
         } else {
-          show('click', 2 + (Math.floor((t - leadIn) / LOOP_MS) % 2));
+          show('click', 2 + (Math.floor((pt - leadIn) / LOOP_MS) % 2));
         }
       } else if (releaseAt && now - releaseAt < RELEASE_MS) {
         show('click', 4);
       } else {
         releaseAt = 0;
         var walking = legsGoing || (mode === 'follow' && moving);
-        show('walk', walking ? Math.floor(phase) % WALK_FRAMES : 0);
+        var wf = ((Math.floor(phase) % WALK_FRAMES) + WALK_FRAMES) % WALK_FRAMES;
+        show('walk', walking ? wf : 0);
       }
     }
     requestAnimationFrame(tick);
@@ -356,13 +350,19 @@
   window.addEventListener('mousemove', onMove, { passive: true });
   window.addEventListener('mousedown', onDown);
   window.addEventListener('mouseup', onUp);
-  window.addEventListener('blur', function () {
-    onUp();
-    if (mode !== 'edge') setOut(false);   // clicking into the video player also blurs the page; the ladybug stays on its edge
-  });
-  root.addEventListener('mouseleave', function () {
-    if (videoAt(x, y, 0, 0)) return;       // it's just the video player taking over the mouse
-    setOut(false);
-    setMode('follow');
+  window.addEventListener('blur', onUp);   // clicking into the video player also blurs the page; the ladybug carries on
+  // When the mouse slips into a video player the page is told the mouse "left". If it left onto a
+  // video (not out of the window), the ladybug stays and starts wandering where it lost the mouse.
+  root.addEventListener('mouseleave', function (e) {
+    if (!seen) return;
+    var inView = e.clientX >= 0 && e.clientY >= 0 && e.clientX <= window.innerWidth && e.clientY <= window.innerHeight;
+    var video = (inView && videoAt(e.clientX, e.clientY, 0, 0, VIDEO_MARGIN * 2)) || videoAt(x, y, 0, 0, VIDEO_MARGIN * 3);
+    if (video) {
+      setOut(true);
+      if (mode !== 'wander' || videoEl !== video) startWander(video, performance.now());
+    } else {
+      setOut(false);       // the mouse really left the window
+      setMode('follow');
+    }
   });
 })();
