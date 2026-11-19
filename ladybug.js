@@ -63,7 +63,7 @@
   // Where the feet touch down, measured from the middle of the ladybug in the art (64px, facing up):
   // out to the very edge of the sprite on each side (32 px); front feet 20 px ahead, middle level, back feet 22 px behind.
   var LEG_OUT = 32 * SCALE, LEG_FRONT = 20 * SCALE, LEG_BACK = -22 * SCALE;
-  var FOOT_LIFE = 1300;        // how long a footprint lasts (milliseconds)
+  var FOOT_LIFE = 250;         // how long a footprint lasts (milliseconds)
   var FOOT_ALPHA = 0.5;        // how dark a fresh footprint is, 0..1
   var FOOT_MAX = 240;          // most footprints on screen at once
 
