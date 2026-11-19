@@ -106,13 +106,3 @@ footer a { color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
-
-/* ---- Ladybug pointer (see ladybug.js) ---- */
-.ladybug-on, .ladybug-on * { cursor: none !important; }
-.ladybug-on iframe { cursor: auto !important; }
-#ladybug {
-  position: fixed; left: 0; top: 0; width: 64px; height: 64px;
-  pointer-events: none; z-index: 9999; opacity: 0;
-  will-change: transform; transition: opacity 0.15s;
-}
-#ladybug img { position: absolute; inset: 0; width: 64px; height: 64px; image-rendering: pixelated; user-select: none; -webkit-user-drag: none; }
