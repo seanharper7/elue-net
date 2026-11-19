@@ -97,6 +97,8 @@ ul.credits .role-line { color: var(--quiet); }
 
 footer { margin-top: 4rem; color: var(--quiet); font-size: 0.9375rem; }
 footer a { color: inherit; }
+.social { list-style: none; margin: 0.5rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; }
+.social a { color: inherit; }
 
 @media (min-width: 40rem) {
   :root { --gutter: 2rem; }

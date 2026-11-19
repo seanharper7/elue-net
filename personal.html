@@ -21,6 +21,7 @@ description: Sean Harper's own music and projects, released as Elue.
       <p class="section-label">{{ site.data.text.youtube_heading | default: 'From my YouTube channel' | escape }}</p>
 {% for v in site.data.youtube %}
       <article class="work">
+        {% include video-embed.html url=v.link_url title=v.title %}
         <h2><span>{{ v.title | escape }}</span>{% if v.year and v.year != '' %} <span class="year">{{ v.year | escape }}</span>{% endif %}</h2>
         {%- if v.description and v.description != '' %}
         <p>{{ v.description | escape }}</p>

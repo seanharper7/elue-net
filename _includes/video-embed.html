@@ -1,0 +1,21 @@
+{%- comment -%}
+  Shows a video player for a YouTube or Vimeo address. Used like:
+  {% include video-embed.html url=item.link_url title=item.title %}
+  Draws nothing if the address isn't a video it recognises.
+{%- endcomment -%}
+{%- assign embed_src = '' -%}
+{%- if include.url contains 'youtube.com/watch' and include.url contains 'v=' -%}
+  {%- assign vid = include.url | split: 'v=' | last | split: '&' | first -%}
+  {%- capture embed_src %}https://www.youtube-nocookie.com/embed/{{ vid }}{% endcapture -%}
+{%- elsif include.url contains 'youtu.be/' -%}
+  {%- assign vid = include.url | split: 'youtu.be/' | last | split: '?' | first -%}
+  {%- capture embed_src %}https://www.youtube-nocookie.com/embed/{{ vid }}{% endcapture -%}
+{%- elsif include.url contains 'vimeo.com/' -%}
+  {%- assign vid = include.url | split: 'vimeo.com/' | last | split: '?' | first -%}
+  {%- capture embed_src %}https://player.vimeo.com/video/{{ vid }}{% endcapture -%}
+{%- endif -%}
+{%- if embed_src != '' %}
+        <div class="video">
+          <iframe src="{{ embed_src }}" title="{{ include.title | escape }}" loading="lazy" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+        </div>
+{%- endif -%}

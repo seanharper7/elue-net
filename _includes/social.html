@@ -1,0 +1,7 @@
+{%- if site.data.links and site.data.links.size > 0 %}
+      <ul class="social">
+{%- for l in site.data.links %}
+        <li><a href="{{ l.url | escape }}" rel="me noopener">{{ l.label | escape }}</a></li>
+{%- endfor %}
+      </ul>
+{%- endif -%}

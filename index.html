@@ -31,6 +31,9 @@ description: Sean Harper is a composer, sound designer and producer. Scoring for
       <p class="section-label">More work</p>
 {% for w in site.data.work %}
       <article class="work">
+        {%- if w.embed %}
+        {% include video-embed.html url=w.link_url title=w.title %}
+        {%- endif %}
         <h2><span>{{ w.title | escape }}</span>{% if w.year and w.year != '' %} <span class="year">{{ w.year | escape }}</span>{% endif %}</h2>
         <p>{{ w.description | escape }}</p>
         {%- if w.link_url and w.link_url != '' %}

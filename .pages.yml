@@ -63,6 +63,10 @@ content:
         label: Link address
         type: string
         description: The full web address, starting with https://
+      - name: embed
+        label: Show the video in the page
+        type: boolean
+        description: Only for YouTube or Vimeo links. Turn on to play the video right here.
 
   - name: personal
     label: Personal work (its own page)
@@ -114,7 +118,25 @@ content:
       - name: link_url
         label: Video address
         type: string
-        description: The full web address of the video, starting with https://
+        description: The full web address of the YouTube video, starting with https://. The video plays right on the page.
+
+  - name: social
+    label: Social links (footer and Contact page)
+    type: file
+    path: _data/links.yml
+    format: yaml
+    list: true
+    fields:
+      - name: label
+        label: Name shown
+        type: string
+        required: true
+        description: For example "Instagram".
+      - name: url
+        label: Link address
+        type: string
+        required: true
+        description: The full web address, starting with https://
 
   - name: services
     label: Services

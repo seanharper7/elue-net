@@ -48,6 +48,7 @@
 {% unless page.footer == false %}
     <footer>
       <p>To hire me: <a href="mailto:{{ site_info.email | escape }}">{{ site_info.email | escape }}</a></p>
+{% include social.html %}
     </footer>
 {% endunless %}
   </div>
