@@ -8,6 +8,7 @@
      can't see the mouse at all. The ladybug can't follow, so it wanders aimlessly: drifting and
      turning at random, stopping now and then, keeping off the player. You get the normal arrow
      meanwhile. When the mouse comes back out, the ladybug runs over to it.
+   - It has a soft drop shadow, and leaves a trail of tiny footprints that fade after a couple of seconds.
    - It never fades: it's either there or it isn't.
    - It only runs on devices with a real mouse, and not for people who ask their
      system to reduce motion; those visitors keep their normal pointer.
@@ -52,6 +53,14 @@
   var KEEP_IN = 30;            // and this far from the edge of the window
   var LEG_MS = 60;             // legs: time per walk frame
 
+  // Drop shadow and footprints
+  var SHADOW = 'drop-shadow(2px 3px 2px rgba(0,0,0,0.35))';   // same direction however it turns
+  var FOOT_PX = 11;            // how far it walks between footprints
+  var FOOT_SIDE = 4;           // how far each footprint sits to the left or right of the path
+  var FOOT_LIFE = 2200;        // how long a footprint lasts (milliseconds)
+  var FOOT_ALPHA = 0.5;        // how dark a fresh footprint is, 0..1
+  var FOOT_MAX = 160;          // most footprints on screen at once
+
   var fine = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!fine || calm) return;
@@ -68,7 +77,11 @@
   bug.id = 'ladybug';
   bug.setAttribute('aria-hidden', 'true');
   bug.style.cssText = 'position:fixed;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;' +
-    'pointer-events:none;z-index:2147483647;opacity:0;will-change:transform;';
+    'pointer-events:none;z-index:2147483647;opacity:0;will-change:transform;filter:' + SHADOW + ';';
+  // The ladybug turns inside this; the shadow filter sits outside it, so the shadow doesn't turn too.
+  var rot = document.createElement('div');
+  rot.style.cssText = 'position:absolute;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;will-change:transform;';
+  bug.appendChild(rot);
   var frames = { walk: [], click: [] };
   function addFrames(kind, count) {
     for (var i = 0; i < count; i++) {
@@ -78,7 +91,7 @@
       img.style.cssText = 'position:absolute;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;' +
         'user-select:none;-webkit-user-drag:none;visibility:hidden;';
       img.src = '/ladybug/' + kind + '-' + i + '.png';
-      bug.appendChild(img);
+      rot.appendChild(img);
       frames[kind].push(img);
     }
   }
@@ -118,8 +131,72 @@
   var curveUntil = 0;               // when to pick a new curve
   var clock = 0;                    // time in wander mode
 
-  function place(ox, oy) {
-    bug.style.transform = 'translate3d(' + (bx + (ox || 0) - SIZE / 2) + 'px,' + (by + (oy || 0) - SIZE / 2) + 'px,0) rotate(' + heading + 'deg)';
+  function place() {
+    bug.style.transform = 'translate3d(' + (bx - SIZE / 2) + 'px,' + (by - SIZE / 2) + 'px,0)';
+    rot.style.transform = 'rotate(' + heading + 'deg)';
+  }
+
+  // ---- footprints ----
+  // Drawn on a see-through canvas over the page. Each print is remembered by its place on the page
+  // (not the window), so scrolling doesn't drag the trail along with it.
+  var canvas = document.createElement('canvas');
+  canvas.setAttribute('aria-hidden', 'true');
+  canvas.style.cssText = 'position:fixed;left:0;top:0;pointer-events:none;z-index:2147483646;';
+  var ctx = canvas.getContext && canvas.getContext('2d');
+  var dpr = 1;
+  function sizeCanvas() {
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(window.innerWidth * dpr);
+    canvas.height = Math.round(window.innerHeight * dpr);
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+  }
+  var prints = [];
+  var lastFx = 0, lastFy = 0, haveLast = false, stepAcc = 0, footSide = 1, drawnSome = false;
+
+  // Call every frame with where the ladybug is; drops a print each FOOT_PX of walking, left then right.
+  function leaveSteps(nx, ny, now) {
+    if (!ctx) return;
+    if (!haveLast || !out) { lastFx = nx; lastFy = ny; haveLast = out; stepAcc = 0; return; }
+    var dx = nx - lastFx, dy = ny - lastFy, d = Math.sqrt(dx * dx + dy * dy);
+    if (d > 300) { lastFx = nx; lastFy = ny; stepAcc = 0; return; }   // it jumped (e.g. the mouse came back in), no trail across the gap
+    if (d === 0) return;
+    var ux = dx / d, uy = dy / d, done = 0;
+    while (stepAcc + (d - done) >= FOOT_PX) {
+      done += FOOT_PX - stepAcc;
+      stepAcc = 0;
+      footSide = -footSide;
+      prints.push({
+        x: lastFx + ux * done - uy * footSide * FOOT_SIDE + window.pageXOffset,
+        y: lastFy + uy * done + ux * footSide * FOOT_SIDE + window.pageYOffset,
+        a: Math.atan2(ux, -uy),
+        born: now
+      });
+    }
+    stepAcc += d - done;
+    lastFx = nx; lastFy = ny;
+    if (prints.length > FOOT_MAX) prints.splice(0, prints.length - FOOT_MAX);
+  }
+
+  function drawSteps(now) {
+    if (!ctx || (!prints.length && !drawnSome)) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+    var i = 0;
+    while (i < prints.length) {
+      var age = now - prints[i].born;
+      if (age >= FOOT_LIFE) { prints.splice(i, 1); continue; }
+      var p = prints[i++];
+      ctx.save();
+      ctx.translate(p.x - window.pageXOffset, p.y - window.pageYOffset);
+      ctx.rotate(p.a);
+      ctx.fillStyle = 'rgba(0,0,0,' + (FOOT_ALPHA * (1 - age / FOOT_LIFE)).toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 1.3, 2.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    drawnSome = prints.length > 0;
   }
 
   // The normal arrow is hidden whenever the ladybug is out and standing in for it,
@@ -177,6 +254,8 @@
       seen = true;
       x = bx = anchorX = e.clientX;
       y = by = anchorY = e.clientY;
+      sizeCanvas();
+      if (ctx) document.body.appendChild(canvas);
       document.body.appendChild(bug);
       lastTick = now;
     }
@@ -238,7 +317,7 @@
     var dt = Math.min(now - lastTick, 100);
     lastTick = now;
     if (seen) {
-      var legsGoing = false, ox = 0, oy = 0;
+      var legsGoing = false;
 
       if (mode === 'wander') {
         if (!videoEl || !document.documentElement.contains(videoEl)) {
@@ -302,7 +381,9 @@
       // turn the head the short way round, at the same speed whatever the screen refresh rate
       var diff = ((target - heading + 540) % 360) - 180;
       heading = Math.abs(diff) < 0.3 ? target : heading + diff * (1 - Math.exp(-dt / TURN_MS));
-      place(ox, oy);
+      place();
+      leaveSteps(bx, by, now);
+      drawSteps(now);
 
       if (mode === 'follow') {
         // legs: at most one frame per refresh, so quick movement never skips round the cycle
@@ -350,6 +431,7 @@
   window.addEventListener('mousemove', onMove, { passive: true });
   window.addEventListener('mousedown', onDown);
   window.addEventListener('mouseup', onUp);
+  window.addEventListener('resize', sizeCanvas);
   window.addEventListener('blur', onUp);   // clicking into the video player also blurs the page; the ladybug carries on
   // When the mouse slips into a video player the page is told the mouse "left". If it left onto a
   // video (not out of the window), the ladybug stays and starts wandering where it lost the mouse.
