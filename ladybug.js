@@ -8,7 +8,8 @@
      can't see the mouse at all. The ladybug can't follow, so it wanders aimlessly: drifting and
      turning at random, stopping now and then, keeping off the player. You get the normal arrow
      meanwhile. When the mouse comes back out, the ladybug runs over to it.
-   - It has a soft drop shadow, and leaves a trail of tiny footprints that fade after a couple of seconds.
+   - It has a soft drop shadow, and leaves footprints where its feet land (three at a time, like a real
+     insect: left-front, right-middle and left-back, then the other three) that fade after a couple of seconds.
    - It never fades: it's either there or it isn't.
    - It only runs on devices with a real mouse, and not for people who ask their
      system to reduce motion; those visitors keep their normal pointer.
@@ -55,11 +56,13 @@
 
   // Drop shadow and footprints
   var SHADOW = 'drop-shadow(2px 3px 2px rgba(0,0,0,0.35))';   // same direction however it turns
-  var FOOT_PX = 11;            // how far it walks between footprints
-  var FOOT_SIDE = 4;           // how far each footprint sits to the left or right of the path
+  var FOOT_PX = 13;            // how far it walks between steps
+  // Where the feet touch down, measured from the middle of the ladybug in the art (64px, facing up):
+  // 28 px out to each side; front feet 20 px ahead, middle level, back feet 22 px behind.
+  var LEG_OUT = 28 * SCALE, LEG_FRONT = 20 * SCALE, LEG_BACK = -22 * SCALE;
   var FOOT_LIFE = 2200;        // how long a footprint lasts (milliseconds)
   var FOOT_ALPHA = 0.5;        // how dark a fresh footprint is, 0..1
-  var FOOT_MAX = 160;          // most footprints on screen at once
+  var FOOT_MAX = 240;          // most footprints on screen at once
 
   var fine = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -154,7 +157,7 @@
   var prints = [];
   var lastFx = 0, lastFy = 0, haveLast = false, stepAcc = 0, footSide = 1, drawnSome = false;
 
-  // Call every frame with where the ladybug is; drops a print each FOOT_PX of walking, left then right.
+  // Call every frame with where the ladybug is; takes a step every FOOT_PX of walking.
   function leaveSteps(nx, ny, now) {
     if (!ctx) return;
     if (!haveLast || !out) { lastFx = nx; lastFy = ny; haveLast = out; stepAcc = 0; return; }
@@ -166,12 +169,20 @@
       done += FOOT_PX - stepAcc;
       stepAcc = 0;
       footSide = -footSide;
-      prints.push({
-        x: lastFx + ux * done - uy * footSide * FOOT_SIDE + window.pageXOffset,
-        y: lastFy + uy * done + ux * footSide * FOOT_SIDE + window.pageYOffset,
-        a: Math.atan2(ux, -uy),
-        born: now
-      });
+      // three feet land: (front, one side), (middle, other side), (back, same side as front)
+      var hr = heading * Math.PI / 180;
+      var fwdX = Math.sin(hr), fwdY = -Math.cos(hr), rtX = Math.cos(hr), rtY = Math.sin(hr);
+      var cx = lastFx + ux * done, cy = lastFy + uy * done;
+      var feet = [[LEG_FRONT, footSide], [0, -footSide], [LEG_BACK, footSide]];
+      for (var f = 0; f < feet.length; f++) {
+        var lon = feet[f][0], lat = feet[f][1] * LEG_OUT;
+        prints.push({
+          x: cx + fwdX * lon + rtX * lat + window.pageXOffset,
+          y: cy + fwdY * lon + rtY * lat + window.pageYOffset,
+          a: hr,
+          born: now
+        });
+      }
     }
     stepAcc += d - done;
     lastFx = nx; lastFy = ny;
