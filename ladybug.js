@@ -10,6 +10,8 @@
      meanwhile. When the mouse comes back out, the ladybug runs over to it.
    - It has a soft drop shadow, and leaves footprints where its feet land (three at a time, like a real
      insect: left-front, right-middle and left-back, then the other three) that fade after a couple of seconds.
+   - Leave the mouse still for a few seconds and the ladybug wanders off the same way; move the mouse
+     and it runs back to it.
    - It never fades: it's either there or it isn't.
    - It only runs on devices with a real mouse, and not for people who ask their
      system to reduce motion; those visitors keep their normal pointer.
@@ -43,7 +45,8 @@
   var VIDEO_MARGIN = 14;       // how close to a video player the ladybug gives up following
   var CHASE_SPEED = 900;       // px per second when running back to the mouse
 
-  // Wandering, when the mouse is somewhere the page can't see (milliseconds, pixels)
+  // Wandering: when the mouse is somewhere the page can't see, or has been left still (milliseconds, pixels)
+  var IDLE_MS = 4000;          // mouse left still this long: the ladybug wanders off
   var WANDER_SPEED = 85;       // px per second
   var WANDER_TURN = 75;        // most it curves, degrees per second
   var WALK_RANGE = [900, 2600];// how long it walks before it might stop
@@ -60,7 +63,7 @@
   // Where the feet touch down, measured from the middle of the ladybug in the art (64px, facing up):
   // out to the very edge of the sprite on each side (32 px); front feet 20 px ahead, middle level, back feet 22 px behind.
   var LEG_OUT = 32 * SCALE, LEG_FRONT = 20 * SCALE, LEG_BACK = -22 * SCALE;
-  var FOOT_LIFE = 2200;        // how long a footprint lasts (milliseconds)
+  var FOOT_LIFE = 1300;        // how long a footprint lasts (milliseconds)
   var FOOT_ALPHA = 0.5;        // how dark a fresh footprint is, 0..1
   var FOOT_MAX = 240;          // most footprints on screen at once
 
@@ -125,9 +128,10 @@
   var pressed = false, pressAt = 0, releaseAt = 0, releaseWanted = false;
   var out = false;                  // is the ladybug on screen?
   var lastTick = 0;
+  var lastInput = 0;                // when the mouse (or the page) last moved
 
   // wander-mode state
-  var videoEl = null;               // the video the mouse is inside
+  var videoEl = null;               // the video the mouse is inside (none if it's just been left still)
   var curve = 0;                    // how much it's turning right now (degrees per second)
   var resting = false;              // stopped for a moment
   var phaseUntil = 0;               // when the current walk or rest ends
@@ -156,13 +160,14 @@
   }
   var prints = [];
   var lastFx = 0, lastFy = 0, haveLast = false, stepAcc = 0, footSide = 1, drawnSome = false;
+  var prevCx = 0, prevCy = 0, havePrev = false;   // where the last step was taken, to know which way the path runs
 
   // Call every frame with where the ladybug is; takes a step every FOOT_PX of walking.
   function leaveSteps(nx, ny, now) {
     if (!ctx) return;
-    if (!haveLast || !out) { lastFx = nx; lastFy = ny; haveLast = out; stepAcc = 0; return; }
+    if (!haveLast || !out) { lastFx = nx; lastFy = ny; haveLast = out; stepAcc = 0; havePrev = false; return; }
     var dx = nx - lastFx, dy = ny - lastFy, d = Math.sqrt(dx * dx + dy * dy);
-    if (d > 300) { lastFx = nx; lastFy = ny; stepAcc = 0; return; }   // it jumped (e.g. the mouse came back in), no trail across the gap
+    if (d > 300) { lastFx = nx; lastFy = ny; stepAcc = 0; havePrev = false; return; }   // it jumped (e.g. the mouse came back in), no trail across the gap
     if (d === 0) return;
     var ux = dx / d, uy = dy / d, done = 0;
     while (stepAcc + (d - done) >= FOOT_PX) {
@@ -170,9 +175,17 @@
       stepAcc = 0;
       footSide = -footSide;
       // three feet land: (front, one side), (middle, other side), (back, same side as front)
-      var hr = heading * Math.PI / 180;
-      var fwdX = Math.sin(hr), fwdY = -Math.cos(hr), rtX = Math.cos(hr), rtY = Math.sin(hr);
+      // The feet are laid out across the path the ladybug is actually walking (from the last step to this
+      // one), not across where its head happens to point, so tight turns can't fling them outward.
       var cx = lastFx + ux * done, cy = lastFy + uy * done;
+      var fwdX = ux, fwdY = uy;
+      if (havePrev) {
+        var pdx = cx - prevCx, pdy = cy - prevCy, pl = Math.sqrt(pdx * pdx + pdy * pdy);
+        if (pl > 1) { fwdX = pdx / pl; fwdY = pdy / pl; }
+      }
+      prevCx = cx; prevCy = cy; havePrev = true;
+      var rtX = -fwdY, rtY = fwdX;
+      var hr = Math.atan2(fwdX, -fwdY);
       var feet = [[LEG_FRONT, footSide], [0, -footSide], [LEG_BACK, footSide]];
       for (var f = 0; f < feet.length; f++) {
         var lon = feet[f][0], lat = feet[f][1] * LEG_OUT;
@@ -261,6 +274,7 @@
 
   function onMove(e) {
     var now = performance.now();
+    lastInput = now;
     if (!seen) {
       seen = true;
       x = bx = anchorX = e.clientX;
@@ -309,6 +323,7 @@
 
   function onDown(e) {
     if (e.button !== 0) return;
+    lastInput = performance.now();
     onMove(e);
     if (mode !== 'follow') return;
     pressed = true;
@@ -331,7 +346,7 @@
       var legsGoing = false;
 
       if (mode === 'wander') {
-        if (!videoEl || !document.documentElement.contains(videoEl)) {
+        if (videoEl && !document.documentElement.contains(videoEl)) {
           setMode('follow'); videoEl = null;
         } else {
           clock += dt;
@@ -347,9 +362,12 @@
           if (!resting) {
             target += curve * dt / 1000;
             // keep off the video player and inside the window: steer away or back in
-            var r = videoEl.getBoundingClientRect();
             var W = window.innerWidth, H = window.innerHeight;
-            var near = bx > r.left - KEEP_OFF && bx < r.right + KEEP_OFF && by > r.top - KEEP_OFF && by < r.bottom + KEEP_OFF;
+            var near = false, r = null;
+            if (videoEl) {
+              r = videoEl.getBoundingClientRect();
+              near = bx > r.left - KEEP_OFF && bx < r.right + KEEP_OFF && by > r.top - KEEP_OFF && by < r.bottom + KEEP_OFF;
+            }
             var edge = bx < KEEP_IN || by < KEEP_IN || bx > W - KEEP_IN || by > H - KEEP_IN;
             var gx = null, gy = null;
             if (near) {
@@ -407,6 +425,8 @@
           phase = 0;
           sound.scurryStop();
         }
+        // the mouse has been left still for a while: off it wanders
+        if (out && !pressed && now - lastInput > IDLE_MS) startWander(null, now);
       }
 
       if (pressed && mode === 'follow') {
@@ -442,6 +462,8 @@
   window.addEventListener('mousemove', onMove, { passive: true });
   window.addEventListener('mousedown', onDown);
   window.addEventListener('mouseup', onUp);
+  window.addEventListener('scroll', function () { lastInput = performance.now(); }, { passive: true });
+  window.addEventListener('wheel', function () { lastInput = performance.now(); }, { passive: true });
   window.addEventListener('resize', sizeCanvas);
   window.addEventListener('blur', onUp);   // clicking into the video player also blurs the page; the ladybug carries on
   // When the mouse slips into a video player the page is told the mouse "left". If it left onto a
