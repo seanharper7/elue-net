@@ -58,8 +58,8 @@
   var SHADOW = 'drop-shadow(2px 3px 2px rgba(0,0,0,0.35))';   // same direction however it turns
   var FOOT_PX = 13;            // how far it walks between steps
   // Where the feet touch down, measured from the middle of the ladybug in the art (64px, facing up):
-  // 28 px out to each side; front feet 20 px ahead, middle level, back feet 22 px behind.
-  var LEG_OUT = 28 * SCALE, LEG_FRONT = 20 * SCALE, LEG_BACK = -22 * SCALE;
+  // out to the very edge of the sprite on each side (32 px); front feet 20 px ahead, middle level, back feet 22 px behind.
+  var LEG_OUT = 32 * SCALE, LEG_FRONT = 20 * SCALE, LEG_BACK = -22 * SCALE;
   var FOOT_LIFE = 2200;        // how long a footprint lasts (milliseconds)
   var FOOT_ALPHA = 0.5;        // how dark a fresh footprint is, 0..1
   var FOOT_MAX = 240;          // most footprints on screen at once
