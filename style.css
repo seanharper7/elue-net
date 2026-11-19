@@ -1,0 +1,107 @@
+/* elue.net — plain black-and-white site.
+   Change the look here: the colours, font and widths are the few tokens just below.
+   Inter is self-hosted (fonts/inter-latin.woff2), licensed under the SIL Open Font License. */
+
+@font-face {
+  font-family: "Inter";
+  src: url("fonts/inter-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root {
+  --bg: #fff;
+  --ink: #000;
+  --quiet: #595959;      /* secondary text; 7:1 against white */
+  --rule: #d9d9d9;
+  --font: "Inter", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --column: 40rem;
+  --gutter: 1.25rem;
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  max-width: var(--column);
+  margin: 0 auto;
+  padding: 2.5rem var(--gutter) 3rem;
+}
+
+a { color: inherit; text-decoration: underline; text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
+a:hover { text-decoration-thickness: 2px; }
+a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+/* ---- Header ---- */
+.masthead { margin-bottom: 2.5rem; }
+.name { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; margin: 0; }
+.name a { text-decoration: none; }
+.role { margin: 0.25rem 0 0; color: var(--quiet); }
+
+nav { margin-top: 1.5rem; }
+nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 1.5rem; }
+nav a { text-decoration: none; padding: 0.25rem 0; border-bottom: 1px solid transparent; }
+nav a:hover { border-bottom-color: var(--ink); }
+nav a[aria-current="page"] { border-bottom-color: var(--ink); font-weight: 600; }
+
+/* ---- Content ---- */
+h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; line-height: 1.25; margin: 0 0 1rem; }
+h2 { font-size: 1.0625rem; font-weight: 600; margin: 0; }
+p { margin: 0 0 1rem; }
+.quiet { color: var(--quiet); }
+.lede { margin-bottom: 2rem; }
+
+.video { position: relative; aspect-ratio: 16 / 9; background: #000; margin: 0 0 0.75rem; }
+.video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+.work { border-top: 1px solid var(--rule); padding: 1.25rem 0; }
+.work:last-child { border-bottom: 1px solid var(--rule); }
+.work h2 { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 1rem; }
+.work h2 .year { font-weight: 400; color: var(--quiet); }
+.work p { margin: 0.25rem 0 0.5rem; }
+.work .go { margin: 0; }
+
+.feature { margin-bottom: 2.5rem; }
+.feature h2 { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 1rem; }
+.feature h2 .year { font-weight: 400; color: var(--quiet); }
+.feature p { margin: 0.25rem 0 0.5rem; }
+
+.section-label { font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--quiet); margin: 2.5rem 0 0.75rem; }
+
+ol.steps { padding-left: 1.25rem; margin: 0 0 1rem; }
+ol.steps li { margin-bottom: 0.75rem; padding-left: 0.25rem; }
+
+dl.services { margin: 0 0 1rem; }
+dl.services dt { font-weight: 600; margin-top: 1.25rem; }
+dl.services dd { margin: 0.125rem 0 0; }
+
+ul.credits { list-style: none; margin: 0; padding: 0; }
+ul.credits li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 1rem; padding: 0.5rem 0; border-top: 1px solid var(--rule); }
+ul.credits li:last-child { border-bottom: 1px solid var(--rule); }
+ul.credits .role-line { color: var(--quiet); }
+
+.big-mail { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; word-break: break-word; }
+
+footer { margin-top: 4rem; color: var(--quiet); font-size: 0.9375rem; }
+footer a { color: inherit; }
+
+@media (min-width: 40rem) {
+  :root { --gutter: 2rem; }
+  .page { padding-top: 4rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
