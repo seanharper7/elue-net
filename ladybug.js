@@ -270,13 +270,15 @@
   rot.style.cssText = 'position:absolute;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;will-change:transform;';
   bug.appendChild(rot);
   var frames = { walk: [], click: [] };
-  function addFrames(kind, count, prefix) {
+  function addFrames(kind, count, prefix, art) {
+    // art: the frames' size in pixels (64 unless said otherwise); bigger art is drawn at the same scale, centred on the ladybug
+    var side = (art || 64) * SCALE, off = (SIZE - side) / 2;
     frames[kind] = [];
     for (var i = 0; i < count; i++) {
       var img = new Image();
       img.alt = '';
       img.draggable = false;
-      img.style.cssText = 'position:absolute;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;' +
+      img.style.cssText = 'position:absolute;left:' + off + 'px;top:' + off + 'px;width:' + side + 'px;height:' + side + 'px;' +
         'user-select:none;-webkit-user-drag:none;visibility:hidden;';
       img.src = (prefix || '/ladybug/' + kind + '-') + i + '.png';
       rot.appendChild(img);
@@ -293,7 +295,7 @@
   function loadFlowerArt() {
     if (flowerArt) return;
     flowerArt = true;
-    addFrames('explode', EXPLODE_FRAMES);
+    addFrames('explode', EXPLODE_FRAMES, null, 128);   // the explosion art is 128x128: twice the size of the ladybug, so it doesn't shrink
     addFrames('fspawn', FSPAWN_FRAMES, '/flower/mouse-spawn-');
     addFrames('fidle', FIDLE_FRAMES, '/flower/mouse-idle-');
     addFrames('fstart', FSTART_FRAMES, '/flower/mouse-start-');
