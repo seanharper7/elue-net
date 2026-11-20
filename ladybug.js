@@ -51,10 +51,12 @@
     press: '/ladybug/click-press.mp3',
     release: '/ladybug/click-release.mp3',
     loop: '/ladybug/click-loop.mp3',
-    scream: '/ladybug/click-scream.mp3'
+    scream: '/ladybug/click-scream.mp3',
+    explode: '/ladybug/explode.mp3'
   };
   var SCURRY_VOLUME = 0.8;     // 0..1, for each sound in turn
   var PRESS_VOLUME = 1;
+  var EXPLODE_VOLUME = 0.7;    // the explosion (the recording is loud: its peak is near full scale)
   var RELEASE_VOLUME = 0.708;  // 3 dB down from the recording
   var LOOP_VOLUME = 10.1;        // the held-click recordings are recorded quiet, so these are boosted (above 1 = louder than the file)
   var SCREAM_VOLUME = 15.1;
@@ -123,15 +125,15 @@
     function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
 
     // press and release: one play, with its pitch, length and loudness nudged at random so it's never quite the same
-    function shot(name, vol) {
+    function shot(name, vol, plain) {   // plain: exactly as recorded (no pitch or length variation)
       var b = buffers[name];
       if (!b) return;
       var t = ctx.currentTime;
-      var rate = 1 + (Math.random() * 2 - 1) * PRESS_PITCH;
-      var trim = PRESS_TRIM[0] + Math.random() * (PRESS_TRIM[1] - PRESS_TRIM[0]);
+      var rate = plain ? 1 : 1 + (Math.random() * 2 - 1) * PRESS_PITCH;
+      var trim = plain ? 1 : PRESS_TRIM[0] + Math.random() * (PRESS_TRIM[1] - PRESS_TRIM[0]);
       var len = b.duration / rate * trim;
       var g = ctx.createGain();
-      g.gain.value = vol * (0.9 + Math.random() * 0.2);
+      g.gain.value = plain ? vol : vol * (0.9 + Math.random() * 0.2);
       g.connect(bus);
       var s = ctx.createBufferSource();
       s.buffer = b;
@@ -929,7 +931,7 @@
         var heldFor = now - pressAt - HOLD_DELAY_MS;
         if (heldFor >= HOLD_RAMP_MS && mode === 'follow') {  // all the way to red: the ladybug explodes
           audio.holdStop();
-          audio.shot('release', RELEASE_VOLUME * 1.6);       // stand-in bang until there's a real explosion sound
+          audio.shot('explode', EXPLODE_VOLUME, true);
           stage = 'explode'; stageAt = now;
           explodeOver = overPageFlower(bx, by);
           pressed = false; releaseWanted = false; releaseAt = 0;
