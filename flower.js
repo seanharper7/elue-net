@@ -22,6 +22,15 @@
 
   var calm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  // The ladybug pointer can blow up and take the flower with it (see ladybug.js): it says so with an event,
+  // and a visit that already went through that starts without the flower. Clicking the wandering ladybug brings it back.
+  var gone = false;
+  try { gone = window.sessionStorage.getItem('elue-flower') === '1'; } catch (e) {}
+  window.addEventListener('elue-flower', function (e) {
+    gone = !!(e.detail && e.detail.gone);
+    box.style.display = gone ? 'none' : '';
+  });
+
   var box = document.createElement('div');
   box.id = 'flower';
   box.setAttribute('aria-hidden', 'true');
@@ -42,6 +51,7 @@
       list.push(img);
     }
   }
+  if (gone) box.style.display = 'none';
   add('spawn', spawn, SPAWN_FRAMES);
   add('dance', dance, DANCE_FRAMES);
 

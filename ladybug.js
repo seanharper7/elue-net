@@ -16,6 +16,9 @@
      grows where it was (/flower/mouse-spawn-0..7.png) and is the pointer from then on, for the rest of the visit:
      mouse-idle (still), mouse-start then mouse-move (heading-turned, while moving), mouse-stop, mouse-click (held).
      The flower is silent except for the click sounds, leaves no footprints, and the red page is a ladybug-only effect.
+   - Once the flower is the pointer, the page's own flower (flower.js) disappears and a second ladybug walks in from the
+     edge of the window and wanders freely (quietly, with footprints). Clicking it turns the pointer back into a
+     ladybug and the page's flower grows back.
    - It never fades: it's either there or it isn't.
    - It only runs on devices with a real mouse, and not for people who ask their
      system to reduce motion; those visitors keep their normal pointer.
@@ -226,6 +229,9 @@
   var SHADOW_EASE_MS = 120;    // how quickly the shadow tightens and relaxes
   var BG_RED = [254, 53, 33];  // the ladybug's own red (read from its art)
   var EXPLODE_FRAMES = 5, FSPAWN_FRAMES = 8, FIDLE_FRAMES = 4, FSTART_FRAMES = 2, FMOVE_FRAMES = 4, FSTOP_FRAMES = 3, FCLICK_FRAMES = 4;
+  var PET_SPEED = 95;          // the ladybug that comes back after the explosion: px per second
+  var PET_DELAY_MS = 1500;     // how long after the flower is up before it walks back in
+  var PET_HIT = SIZE * 0.7;    // how close a click has to be to catch it
   var EXPLODE_MS = 90;         // time per explosion frame
   var FSPAWN_MS = 100;         // time per frame as the flower grows where the ladybug was
   var FSTART_MS = 70, FMOVE_MS = 80, FSTOP_MS = 80, FIDLE_MS = 160, FCLICK_MS = 90;   // flower pointer: time per frame
@@ -292,6 +298,21 @@
     addFrames('fmove', FMOVE_FRAMES, '/flower/mouse-move-');
     addFrames('fstop', FSTOP_FRAMES, '/flower/mouse-stop-');
     addFrames('fclick', FCLICK_FRAMES, '/flower/mouse-click-');
+    petDom = document.createElement('div');
+    petDom.setAttribute('aria-hidden', 'true');
+    petDom.style.cssText = 'position:fixed;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;display:none;' +
+      'pointer-events:none;z-index:2147483646;will-change:transform;filter:' + SHADOW + ';';
+    petRot = document.createElement('div');
+    petRot.style.cssText = 'position:absolute;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;will-change:transform;';
+    petDom.appendChild(petRot);
+    for (var i = 0; i < WALK_FRAMES; i++) {
+      var im = new Image();
+      im.alt = ''; im.draggable = false;
+      im.style.cssText = 'position:absolute;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;user-select:none;-webkit-user-drag:none;visibility:hidden;';
+      im.src = '/ladybug/walk-' + i + '.png';
+      petRot.appendChild(im);
+      petImgs.push(im);
+    }
   }
 
   function showF(kind, i) { var l = frames[kind]; if (l && l[i]) show(kind, i); }   // the flower art loads lazily: show nothing until it's there
@@ -330,6 +351,12 @@
   var stage = 'bug', stageAt = 0;
   var fState = 'idle', fSince = 0;   // flower pointer: 'idle' | 'start' | 'move' | 'stop'
   var bgReleaseMs = BG_RELEASE_MS;
+  // After the explosion a second ladybug walks back in from the edge of the window and wanders by itself.
+  // Clicking it turns the pointer back into a ladybug (and the page's own flower comes back).
+  var petOn = false, petAt = 0, petWalking = false, pEnter = false;
+  var px = 0, py = 0, pHeading = 0, pTarget = 0, pPhase = 0, pGoalX = 0, pGoalY = 0;
+  var pResting = false, pPhaseUntil = 0, pCurve = 0, pCurveUntil = 0, pClock = 0, pShown = -1;
+  var petDom = null, petRot = null, petImgs = [];
   try { if (window.sessionStorage.getItem('elue-flower') === '1') stage = 'flower'; } catch (e) {}
   if (stage === 'flower') loadFlowerArt();
   var lastBx = 0, lastBy = 0, speedNow = 0;   // for the scurry sound: how fast the ladybug is moving (px per second)
@@ -483,9 +510,9 @@
   var prevCx = 0, prevCy = 0, havePrev = false;   // where the last step was taken, to know which way the path runs
 
   // Call every frame with where the ladybug is; takes a step every FOOT_PX of walking.
-  function leaveSteps(nx, ny, now) {
+  function leaveSteps(nx, ny, now, always) {
     if (!ctx) return;
-    if (!haveLast || !out) { lastFx = nx; lastFy = ny; haveLast = out; stepAcc = 0; havePrev = false; return; }
+    if (!haveLast || !(out || always)) { lastFx = nx; lastFy = ny; haveLast = out || !!always; stepAcc = 0; havePrev = false; return; }
     var dx = nx - lastFx, dy = ny - lastFy, d = Math.sqrt(dx * dx + dy * dy);
     if (d > 300) { lastFx = nx; lastFy = ny; stepAcc = 0; havePrev = false; return; }   // it jumped (e.g. the mouse came back in), no trail across the gap
     if (d === 0) return;
@@ -579,6 +606,100 @@
   // ---- wandering ----
   function rand(range) { return range[0] + Math.random() * (range[1] - range[0]); }
 
+  // ---- the ladybug that comes back ----
+  function announceFlower(gone) {   // flower.js hides or restores the page's own flower
+    try { window.dispatchEvent(new CustomEvent('elue-flower', { detail: { gone: gone } })); } catch (e) {}
+  }
+
+  function petHide() {
+    petOn = false; petWalking = false; pEnter = false;
+    if (petDom) petDom.style.display = 'none';
+  }
+
+  function petSpawn() {
+    if (!petDom) return;
+    if (!petDom.parentNode) document.body.appendChild(petDom);
+    var W = window.innerWidth, H = window.innerHeight, side = Math.floor(Math.random() * 4), m = SIZE;
+    if (side === 0) { px = Math.random() * W; py = -m; }
+    else if (side === 1) { px = W + m; py = Math.random() * H; }
+    else if (side === 2) { px = Math.random() * W; py = H + m; }
+    else { px = -m; py = Math.random() * H; }
+    pGoalX = W * (0.25 + 0.5 * Math.random());
+    pGoalY = H * (0.25 + 0.5 * Math.random());
+    pTarget = pHeading = Math.atan2(pGoalX - px, -(pGoalY - py)) * 180 / Math.PI;
+    pEnter = true; petOn = true; pResting = false; pClock = 0;
+    pPhaseUntil = rand(WALK_RANGE); pCurve = 0; pCurveUntil = 0;
+    petDom.style.display = '';
+  }
+
+  function petTick(now, dt) {
+    petWalking = false;
+    if (stage !== 'flower') { if (petOn) petHide(); petAt = 0; return; }
+    if (!petOn) {
+      if (!petAt) petAt = now + PET_DELAY_MS;
+      if (now < petAt) return;
+      petSpawn();
+      if (!petOn) return;
+    }
+    var W = window.innerWidth, H = window.innerHeight;
+    pClock += dt;
+    if (pEnter) {
+      pTarget = Math.atan2(pGoalX - px, -(pGoalY - py)) * 180 / Math.PI;   // straight in from the edge
+      if (px > KEEP_IN + 12 && px < W - KEEP_IN - 12 && py > KEEP_IN + 12 && py < H - KEEP_IN - 12) { pEnter = false; pClock = 0; pPhaseUntil = rand(WALK_RANGE); }
+    } else {
+      if (pClock >= pPhaseUntil) {                         // end of a walk or a rest
+        if (pResting) { pResting = false; pPhaseUntil = pClock + rand(WALK_RANGE); }
+        else if (Math.random() < REST_CHANCE) { pResting = true; pPhaseUntil = pClock + rand(REST_RANGE); }
+        else pPhaseUntil = pClock + rand(WALK_RANGE);
+      }
+      if (pClock >= pCurveUntil) { pCurve = (Math.random() * 2 - 1) * WANDER_TURN; pCurveUntil = pClock + rand(STEER_RANGE); }
+      if (!pResting) {
+        pTarget += pCurve * dt / 1000;
+        var gx = null, gy = null, vids = document.getElementsByTagName('iframe');
+        for (var i = 0; i < vids.length; i++) {            // keep off the video players
+          var r = vids[i].getBoundingClientRect();
+          if (r.width && r.height && px > r.left - KEEP_OFF && px < r.right + KEEP_OFF && py > r.top - KEEP_OFF && py < r.bottom + KEEP_OFF) {
+            gx = px - (r.left + r.right) / 2; gy = py - (r.top + r.bottom) / 2; break;
+          }
+        }
+        if (gx === null && (px < KEEP_IN || py < KEEP_IN || px > W - KEEP_IN || py > H - KEEP_IN)) { gx = W / 2 - px; gy = H / 2 - py; }
+        if (gx !== null) {
+          var away = Math.atan2(gx, -gy) * 180 / Math.PI;
+          var turn = ((away - pTarget + 540) % 360) - 180;
+          pTarget += turn * (1 - Math.exp(-dt / 120));
+        }
+      }
+    }
+    if (pEnter || !pResting) {
+      var hr = pHeading * Math.PI / 180, step = PET_SPEED * dt / 1000;
+      px += Math.sin(hr) * step; py -= Math.cos(hr) * step;
+      pPhase += dt / LEG_MS;
+      petWalking = true;
+    }
+    var diff = ((pTarget - pHeading + 540) % 360) - 180;
+    pHeading = Math.abs(diff) < 0.3 ? pTarget : pHeading + diff * (1 - Math.exp(-dt / TURN_MS));
+    petDom.style.transform = 'translate3d(' + (px - SIZE / 2) + 'px,' + (py - SIZE / 2) + 'px,0)';
+    petRot.style.transform = 'rotate(' + pHeading + 'deg)';
+    var wf = petWalking ? ((Math.floor(pPhase) % WALK_FRAMES) + WALK_FRAMES) % WALK_FRAMES : 0;
+    if (wf !== pShown) {
+      if (pShown >= 0 && petImgs[pShown]) petImgs[pShown].style.visibility = 'hidden';
+      if (petImgs[wf]) petImgs[wf].style.visibility = 'visible';
+      pShown = wf;
+    }
+  }
+
+  // a click landed on the wandering ladybug: the pointer is a ladybug again and the page's flower grows back
+  function restoreBug() {
+    heading = target = pHeading;
+    stage = 'bug'; petAt = 0;
+    petHide();
+    try { window.sessionStorage.removeItem('elue-flower'); } catch (e) {}
+    announceFlower(false);
+    bx = x; by = y; anchorX = x; anchorY = y;
+    setMode('follow');
+    place();
+  }
+
   function startWander(video, now) {
     videoEl = video;
     resting = false;
@@ -648,6 +769,10 @@
     onMove(e);
     if (mode !== 'follow') return;
     if (stage === 'explode' || stage === 'spawn') return;   // the ladybug is gone and the flower isn't up yet
+    if (stage === 'flower' && petOn) {                       // caught the wandering ladybug?
+      var cdx = e.clientX - px, cdy = e.clientY - py;
+      if (cdx * cdx + cdy * cdy < PET_HIT * PET_HIT) restoreBug();
+    }
     pressed = true;
     releaseWanted = false;
     releaseAt = 0;
@@ -737,7 +862,10 @@
       var diff = ((target - heading + 540) % 360) - 180;
       heading = Math.abs(diff) < 0.3 ? target : heading + diff * (1 - Math.exp(-dt / TURN_MS));
       place();
-      if (stage === 'bug') leaveSteps(bx, by, now); else haveLast = false;   // the flower leaves no footprints
+      petTick(now, dt);
+      if (stage === 'bug') leaveSteps(bx, by, now);                // the flower pointer leaves no footprints, the wandering ladybug does
+      else if (petOn) leaveSteps(px, py, now, true);
+      else haveLast = false;
       drawSteps(now);
 
       // scurry sound: its speed follows how fast the ladybug is actually moving, smoothed so it glides
@@ -748,11 +876,13 @@
       var holding = pressed && !releaseWanted;
       if (holding !== shadowHeld) { shadowHeld = holding; bug.style.filter = holding ? SHADOW_HELD : SHADOW; }
       // wandering (the mouse was left still, or it's over a video) or a held click: turn it way down
-      var level = !audible || muted || stage !== 'bug' ? 0 : (mode === 'wander' || holding ? IDLE_VOLUME : 1);
+      var level = stage === 'flower' ? (petWalking && !muted && !document.hidden ? IDLE_VOLUME : 0)   // the wandering ladybug's scurry, at wander volume
+        : (!audible || muted || stage !== 'bug' ? 0 : (mode === 'wander' || holding ? IDLE_VOLUME : 1));
+      var sndX = stage === 'flower' ? px : bx, sndSpeed = stage === 'flower' ? PET_SPEED : speedNow;
       // 85 px/s (its wandering pace) plays the recording as it is; faster scampering rises, slower slows down.
       // While a click is held it drags along at half speed, pitched down.
-      audio.walk((0.55 + 0.5 * Math.log(1 + speedNow / 60)) * (holding ? HOLD_WALK_RATE : 1), level);
-      audio.pan((bx / Math.max(window.innerWidth, 1)) * 2 - 1);   // follows the ladybug across the window
+      audio.walk((0.55 + 0.5 * Math.log(1 + sndSpeed / 60)) * (holding && stage === 'bug' ? HOLD_WALK_RATE : 1), level);
+      audio.pan((sndX / Math.max(window.innerWidth, 1)) * 2 - 1);   // follows the ladybug across the window
       soundPlaying = level > 0 && audio.live();
       if (stage === 'bug' && pressed && !releaseWanted) {    // a held click: after a short wait the loops begin, then swell
         var heldFor = now - pressAt - HOLD_DELAY_MS;
@@ -764,6 +894,7 @@
           lastInput = now;                                   // the mouse is down and still: don't wander off on the spot
           bgReleaseMs = BG_EXPLODE_MS;
           try { window.sessionStorage.setItem('elue-flower', '1'); } catch (e) {}
+          announceFlower(true);
         } else if (heldFor >= 0) {
           if (!holdStarted) { holdStarted = true; audio.holdStart(); }
           audio.hold(Math.min(1, heldFor / HOLD_RAMP_MS));
