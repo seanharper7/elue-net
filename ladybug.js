@@ -218,6 +218,8 @@
 
   // Drop shadow and footprints
   var SHADOW = 'drop-shadow(2px 3px 2px rgba(0,0,0,0.35))';   // same direction however it turns
+  var SHADOW_HELD = 'drop-shadow(2px 3px 0.5px rgba(0,0,0,0.35))'; // while a click is held it tightens: a smaller blur radius
+  var SHADOW_EASE_MS = 120;    // how quickly the shadow tightens and relaxes
   var FOOT_PX = 13;            // how far it walks between steps
   // Where the feet touch down, measured from the middle of the ladybug in the art (64px, facing up):
   // out almost to the edge of the sprite on each side (28.8 px of the 32; was the full 32 until trimmed 10%); front feet 20 px ahead, middle level, back feet 22 px behind.
@@ -242,7 +244,8 @@
   bug.id = 'ladybug';
   bug.setAttribute('aria-hidden', 'true');
   bug.style.cssText = 'position:fixed;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;' +
-    'pointer-events:none;z-index:2147483647;opacity:0;will-change:transform;filter:' + SHADOW + ';';
+    'pointer-events:none;z-index:2147483647;opacity:0;will-change:transform;filter:' + SHADOW + ';' +
+    'transition:filter ' + SHADOW_EASE_MS + 'ms ease-out;';
   // The ladybug turns inside this; the shadow filter sits outside it, so the shadow doesn't turn too.
   var rot = document.createElement('div');
   rot.style.cssText = 'position:absolute;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;will-change:transform;';
@@ -288,6 +291,7 @@
   var out = false;                  // is the ladybug on screen?
   var lastTick = 0;
   var lastInput = 0;                // when the mouse (or the page) last moved
+  var shadowHeld = false;            // is the shadow in its tightened (click held) state?
   var holdStarted = false;           // have the held-click loops begun?
   var lastBx = 0, lastBy = 0, speedNow = 0;   // for the scurry sound: how fast the ladybug is moving (px per second)
 
@@ -700,6 +704,7 @@
       if (dt > 0) speedNow += (Math.sqrt(mdx * mdx + mdy * mdy) / dt * 1000 - speedNow) * (1 - Math.exp(-dt / 120));
       var audible = out && !document.hidden && (legsGoing || (mode === 'follow' && moving));
       var holding = pressed && !releaseWanted;
+      if (holding !== shadowHeld) { shadowHeld = holding; bug.style.filter = holding ? SHADOW_HELD : SHADOW; }
       // wandering (the mouse was left still, or it's over a video) or a held click: turn it way down
       var level = !audible || muted ? 0 : (mode === 'wander' || holding ? IDLE_VOLUME : 1);
       // 85 px/s (its wandering pace) plays the recording as it is; faster scampering rises, slower slows down.
