@@ -18,78 +18,163 @@
 
    Art lives in /ladybug/ (walk-0..7.png, click-0..4.png), all 64x64 and facing up.
    Everything it needs to look right is set in this file, so it doesn't depend on style.css.
-   - Sound: a scurry loop that speeds up and slows with the ladybug, pans left and right with where it is,
-     and turns way down when it has wandered off because the mouse sat still. A mute button (top-left,
-     art in /volume/) and the M key switch it off; a big "M to mute audio" appears once per visit.
-   The scurrying sound (/ladybug/walk-loop.mp3) is wired in below. The `sound` functions are still empty
-   on purpose: that's where the squish and release sounds will plug in later. */
+   - Sound (see "sound" below): a scurry loop that speeds up and slows with the ladybug; a press and a release
+     sound that vary a little each time; a held click swells a loop and a rising scream. All of it pans left
+     and right with where the ladybug is, and the scurry turns way down while it wanders. A mute button
+     (top-left, art in /volume/) and the M key switch it off; a big "M to mute audio" appears once per visit. */
 
 (function () {
   'use strict';
 
-  var sound = {
-    scurryStart: function () {},   // the ladybug started scurrying (following, chasing or wandering)
-    scurryStop: function () {},    // it came to rest
-    squish: function () {},        // a click went down
-    release: function () {}        // a click was let go
-  };
-
-  // The scurrying sound: /ladybug/walk-loop.mp3 plays on a seamless loop while the ladybug is walking,
-  // faster and higher when it moves faster, slower and lower when it slows, and fades out when it rests.
-  // Browsers won't play sound until the visitor has clicked or pressed a key on the page, so it starts
+  // ---- sound ----
+  // All in /ladybug/:
+  //   walk-loop.mp3     plays on a seamless loop while the ladybug walks: faster and higher when it moves faster,
+  //                     slower and lower when it slows, silent when it rests, way down when it has wandered off
+  //   click-press.mp3   once, the moment a click goes down (a little different every time)
+  //   click-release.mp3 once, the moment it's let go (a little different every time)
+  //   click-loop.mp3    starts when a click is held and slowly swells; stops on release
+  //   click-scream.mp3  starts at the same moment, from silence, swelling and rising in pitch; stops on release
+  // Everything pans left and right with where the ladybug is on the page.
+  // Browsers won't play sound until the visitor has clicked or pressed a key on the page, so sound starts
   // after the first click (or key press) on each page.
-  var SCURRY_URL = '/ladybug/walk-loop.mp3';
-  var SCURRY_VOLUME = 0.8;     // 0..1
-  var SCURRY_RATE_MIN = 0.5;   // slowest it ever plays (1 = the recording as it is)
+  var SOUND_URLS = {
+    walk: '/ladybug/walk-loop.mp3',
+    press: '/ladybug/click-press.mp3',
+    release: '/ladybug/click-release.mp3',
+    loop: '/ladybug/click-loop.mp3',
+    scream: '/ladybug/click-scream.mp3'
+  };
+  var SCURRY_VOLUME = 0.8;     // 0..1, for each sound in turn
+  var PRESS_VOLUME = 1;
+  var RELEASE_VOLUME = 1;
+  var LOOP_VOLUME = 1;
+  var SCREAM_VOLUME = 1;
+  var SCURRY_RATE_MIN = 0.5;   // walk sound: slowest it ever plays (1 = the recording as it is)
   var SCURRY_RATE_MAX = 2.4;   // fastest
-  var IDLE_VOLUME = 0.12;      // how loud it is (as a share of the full volume) when it has wandered off because the mouse sat still
+  var IDLE_VOLUME = 0.12;      // walk sound while it wanders (mouse left still, or over a video), as a share of full volume
   var PAN_WIDTH = 0.9;         // how far the sound swings to each side: 0 = stays centred, 1 = fully into one ear at the window edge
-  var scurry = (function () {
+  var PRESS_PITCH = 0.1;       // press and release: pitch (and so length) varies by up to this much either way, each time
+  var PRESS_TRIM = [0.75, 1];  // and each time it may also be cut short, to this share of its length
+  var HOLD_RAMP_MS = 6000;     // held click: how long the loop and the scream take to swell to full
+  var SCREAM_PITCH_END = 1.5;  // the scream rises to this multiple of its normal pitch by then
+
+  var audio = (function () {
+    var noop = function () {};
+    var none = { live: function () { return false; }, walk: noop, pan: noop, mute: noop, shot: noop, holdStart: noop, hold: noop, holdStop: noop };
     var AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC || !window.fetch) return { set: function () {}, live: function () { return false; } };
-    var ctx = null, gain = null, panner = null, src = null, raw = null, decoding = false, buffer = null;
+    if (!AC || !window.fetch) return none;
+    var ctx = null, master = null, panner = null, bus = null;
     try {
       ctx = new AC();
-      gain = ctx.createGain(); gain.gain.value = 0; gain.connect(ctx.destination);
-      if (ctx.createStereoPanner) { panner = ctx.createStereoPanner(); panner.connect(gain); }
-    } catch (e) { return { set: function () {}, live: function () { return false; } }; }
-    fetch(SCURRY_URL).then(function (r) { return r.arrayBuffer(); }).then(function (a) { raw = a; build(); }).catch(function () {});
-    function build() {
-      if (src || !raw || decoding || ctx.state !== 'running') return;
-      if (!buffer) {
-        decoding = true;
-        var done = function (b) { buffer = b; decoding = false; build(); };
-        var fail = function () { decoding = false; raw = null; };
-        var p = ctx.decodeAudioData(raw, done, fail);   // callback form works in older Safari too
-        if (p && p.catch) p.catch(fail);
-        return;
-      }
-      src = ctx.createBufferSource();
-      src.buffer = buffer;
-      src.loop = true;
-      src.connect(panner || gain);
-      src.start(0);
+      master = ctx.createGain();                       // the mute switch
+      master.connect(ctx.destination);
+      if (ctx.createStereoPanner) { panner = ctx.createStereoPanner(); panner.connect(master); }
+      bus = panner || master;                          // every sound goes in here
+    } catch (e) { return none; }
+
+    var buffers = {}, walkSrc = null, walkGain = null, held = null;
+
+    Object.keys(SOUND_URLS).forEach(function (name) {
+      fetch(SOUND_URLS[name]).then(function (r) { return r.arrayBuffer(); }).then(function (raw) {
+        var ok = function (b) { buffers[name] = b; if (name === 'walk') startWalk(); };
+        var p = ctx.decodeAudioData(raw, ok, noop);    // callback form works in older Safari too
+        if (p && p.catch) p.catch(noop);
+      }).catch(noop);
+    });
+
+    function startWalk() {
+      if (walkSrc || !buffers.walk || ctx.state !== 'running') return;
+      walkGain = ctx.createGain(); walkGain.gain.value = 0; walkGain.connect(bus);
+      walkSrc = ctx.createBufferSource();
+      walkSrc.buffer = buffers.walk;
+      walkSrc.loop = true;
+      walkSrc.connect(walkGain);
+      walkSrc.start(0);
     }
     function unlock() {
-      var go = function () { build(); if (ctx.state === 'running') { off(); } };
-      if (ctx.state === 'running') go(); else ctx.resume().then(go, function () {});
+      var go = function () { startWalk(); if (ctx.state === 'running') off(); };
+      if (ctx.state === 'running') go(); else ctx.resume().then(go, noop);
     }
     var evs = ['pointerdown', 'mousedown', 'keydown', 'touchstart'];
     function off() { for (var i = 0; i < evs.length; i++) window.removeEventListener(evs[i], unlock, true); }
     for (var i = 0; i < evs.length; i++) window.addEventListener(evs[i], unlock, true);
-    ctx.onstatechange = build;
-    // rate: how fast the legs are going; level: 0 = silent, 1 = full; pan: -1 = far left .. 1 = far right
+    ctx.onstatechange = startWalk;
+
+    function clamp(v, lo, hi) { return Math.min(hi, Math.max(lo, v)); }
+
+    // press and release: one play, with its pitch, length and loudness nudged at random so it's never quite the same
+    function shot(name, vol) {
+      var b = buffers[name];
+      if (!b) return;
+      var t = ctx.currentTime;
+      var rate = 1 + (Math.random() * 2 - 1) * PRESS_PITCH;
+      var trim = PRESS_TRIM[0] + Math.random() * (PRESS_TRIM[1] - PRESS_TRIM[0]);
+      var len = b.duration / rate * trim;
+      var g = ctx.createGain();
+      g.gain.value = vol * (0.9 + Math.random() * 0.2);
+      g.connect(bus);
+      var s = ctx.createBufferSource();
+      s.buffer = b;
+      s.playbackRate.value = rate;
+      s.connect(g);
+      s.start(t);
+      if (trim < 1) g.gain.setTargetAtTime(0, t + Math.max(0, len - 0.08), 0.025);   // a quick fade instead of a chop
+      s.stop(t + len + 0.25);
+    }
+
+    // a held click: both loops begin together, at silence
+    function holdStart() {
+      if (!buffers.loop || !buffers.scream) return;
+      holdStop();
+      var t = ctx.currentTime, h = {};
+      ['loop', 'scream'].forEach(function (n) {
+        var g = ctx.createGain(); g.gain.value = 0; g.connect(bus);
+        var s = ctx.createBufferSource(); s.buffer = buffers[n]; s.loop = true; s.connect(g); s.start(t);
+        h[n] = { src: s, gain: g };
+      });
+      held = h;
+    }
+    function hold(p) {   // p: how far through the swell, 0..1
+      if (!held) return;
+      var t = ctx.currentTime;
+      held.loop.gain.gain.setTargetAtTime(LOOP_VOLUME * Math.pow(p, 1.5), t, 0.05);
+      held.scream.gain.gain.setTargetAtTime(SCREAM_VOLUME * Math.pow(p, 2.5), t, 0.05);
+      held.scream.src.playbackRate.setTargetAtTime(1 + (SCREAM_PITCH_END - 1) * p, t, 0.05);
+    }
+    function holdStop() {
+      if (!held) return;
+      var t = ctx.currentTime, h = held;
+      held = null;
+      ['loop', 'scream'].forEach(function (n) {
+        h[n].gain.gain.setTargetAtTime(0, t, 0.04);
+        h[n].src.stop(t + 0.4);
+      });
+    }
+
     return {
-      live: function () { return !!src; },
-      set: function (rate, level, pan) {
-        if (!src) return;
+      live: function () { return !!walkSrc; },
+      // rate: how fast the legs are going; level: 0 = silent, 1 = full
+      walk: function (rate, level) {
+        if (!walkSrc) return;
         var t = ctx.currentTime;
-        src.playbackRate.setTargetAtTime(Math.min(SCURRY_RATE_MAX, Math.max(SCURRY_RATE_MIN, rate)), t, 0.04);
-        gain.gain.setTargetAtTime(level * SCURRY_VOLUME, t, 0.08);
-        if (panner) panner.pan.setTargetAtTime(Math.min(1, Math.max(-1, pan)) * PAN_WIDTH, t, 0.04);
-      }
+        walkSrc.playbackRate.setTargetAtTime(clamp(rate, SCURRY_RATE_MIN, SCURRY_RATE_MAX), t, 0.04);
+        walkGain.gain.setTargetAtTime(level * SCURRY_VOLUME, t, 0.08);
+      },
+      pan: function (p) { if (panner) panner.pan.setTargetAtTime(clamp(p, -1, 1) * PAN_WIDTH, ctx.currentTime, 0.04); },
+      mute: function (m, instant) {
+        if (instant) master.gain.value = m ? 0 : 1;
+        else master.gain.setTargetAtTime(m ? 0 : 1, ctx.currentTime, 0.03);
+      },
+      shot: shot, holdStart: holdStart, hold: hold, holdStop: holdStop
     };
   })();
+
+  var sound = {
+    scurryStart: function () {},   // the ladybug started scurrying (following, chasing or wandering)
+    scurryStop: function () {},    // it came to rest
+    squish: function () { audio.shot('press', PRESS_VOLUME); audio.holdStart(); },   // a click went down
+    release: function () { audio.holdStop(); audio.shot('release', RELEASE_VOLUME); } // a click was let go
+  };
 
   var WALK_FRAMES = 8;
   var CLICK_FRAMES = 5;
@@ -208,6 +293,7 @@
   // The button sits in the top-left corner (press M to do the same). The choice is remembered between pages.
   var muted = false, soundPlaying = false;
   try { muted = window.localStorage.getItem('elue-muted') === '1'; } catch (e) {}
+  audio.mute(muted, true);
 
   var ICON_PX = 36;
   var ICON_FRAMES = { on: 12, turnoff: 8, off: 4 };
@@ -270,6 +356,7 @@
   function setMuted(m) {
     if (m === muted) return;
     muted = m;
+    audio.mute(m);
     try { window.localStorage.setItem('elue-muted', m ? '1' : '0'); } catch (e) {}
     muteBtn.setAttribute('aria-pressed', m ? 'true' : 'false');
     muteBtn.setAttribute('aria-label', m ? 'Unmute audio' : 'Mute audio');
@@ -443,6 +530,7 @@
     curve = 0;
     target = heading;
     if (!moving) { moving = true; sound.scurryStart(); }
+    if (pressed && !releaseWanted) audio.holdStop();   // wandered off mid-click: the held sounds end
     pressed = false; releaseWanted = false;
     setMode('wander');
   }
@@ -509,8 +597,9 @@
   }
 
   function onUp() {
-    if (!pressed) return;
+    if (!pressed || releaseWanted) return;
     releaseWanted = true;   // the frame loop plays the release once the lead-in has finished
+    sound.release();        // the sound doesn't wait for it: it plays the moment the button comes up
   }
 
   // ---- animation loop ----
@@ -594,12 +683,13 @@
       lastBx = bx; lastBy = by;
       if (dt > 0) speedNow += (Math.sqrt(mdx * mdx + mdy * mdy) / dt * 1000 - speedNow) * (1 - Math.exp(-dt / 120));
       var audible = out && !pressed && !document.hidden && (legsGoing || (mode === 'follow' && moving));
-      var idleWander = mode === 'wander' && !videoEl;      // it wandered off because the mouse sat still: turn it way down
-      var level = !audible || muted ? 0 : (idleWander ? IDLE_VOLUME : 1);
-      var pan = (bx / Math.max(window.innerWidth, 1)) * 2 - 1;   // follows the ladybug across the window
+      // wandering (the mouse was left still, or it's over a video): turn it way down
+      var level = !audible || muted ? 0 : (mode === 'wander' ? IDLE_VOLUME : 1);
       // 85 px/s (its wandering pace) plays the recording as it is; faster scampering rises, slower slows down
-      scurry.set(0.55 + 0.5 * Math.log(1 + speedNow / 60), level, pan);
-      soundPlaying = level > 0 && scurry.live();
+      audio.walk(0.55 + 0.5 * Math.log(1 + speedNow / 60), level);
+      audio.pan((bx / Math.max(window.innerWidth, 1)) * 2 - 1);   // follows the ladybug across the window
+      soundPlaying = level > 0 && audio.live();
+      if (pressed && !releaseWanted) audio.hold(Math.min(1, (now - pressAt) / HOLD_RAMP_MS));   // a held click swells
 
       if (mode === 'follow') {
         // legs: at most one frame per refresh, so quick movement never skips round the cycle
@@ -623,7 +713,6 @@
           pressed = false;
           releaseWanted = false;
           releaseAt = now;
-          sound.release();
           show('click', 4);
         } else if (pt < LEAD_IN_MS) {
           show('click', 0);
