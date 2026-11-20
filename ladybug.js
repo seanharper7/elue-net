@@ -234,6 +234,8 @@
   var PET_SPEED = 95;          // the ladybug that comes back after the explosion: px per second
   var PET_DELAY_MS = 1500;     // how long after the flower is up before it walks back in
   var PET_HIT = SIZE * 0.7;    // how close a click has to be to catch it
+  var FPSTART_FRAMES = 2, FPLANT_FRAMES = 4, FPEND_FRAMES = 2;   // the planted flower: a stem grows (start), stays (plant, loops gently), pulls back in (end)
+  var FPSTART_MS = 130, FPLANT_MS = 220, FPEND_MS = 100;
   var EXPLODE_MS = 90;         // time per explosion frame
   var FSPAWN_MS = 100;         // time per frame as the flower grows where the ladybug was
   var FSTART_MS = 70, FMOVE_MS = 80, FSTOP_MS = 80, FIDLE_MS = 160, FCLICK_MS = 90;   // flower pointer: time per frame
@@ -302,6 +304,9 @@
     addFrames('fmove', FMOVE_FRAMES, '/flower/mouse-move-');
     addFrames('fstop', FSTOP_FRAMES, '/flower/mouse-stop-');
     addFrames('fclick', FCLICK_FRAMES, '/flower/mouse-click-');
+    addFrames('fpstart', FPSTART_FRAMES, '/flower/mouse-pstart-');
+    addFrames('fplant', FPLANT_FRAMES, '/flower/mouse-plant-');
+    addFrames('fpend', FPEND_FRAMES, '/flower/mouse-pend-');
     petDom = document.createElement('div');
     petDom.setAttribute('aria-hidden', 'true');
     petDom.style.cssText = 'position:fixed;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;display:none;' +
@@ -975,7 +980,16 @@
         if (pressed && !releaseWanted) {                                  // held: the flower opens wide
           showF('fclick', Math.floor((now - pressAt) / FCLICK_MS) % FCLICK_FRAMES);
         } else {
-          if (walkingNow) {
+          // left alone (still for a while, or over a video where the page can't see it): it plants itself
+          var planted = !walkingNow && (mode === 'wander' || (mode === 'follow' && now - lastInput > IDLE_MS));
+          if (planted) {
+            if (fState === 'start' || fState === 'move') { fState = 'stop'; fSince = now; }
+            else if (fState === 'stop') { if (now - fSince >= FSTOP_FRAMES * FSTOP_MS) { fState = 'pstart'; fSince = now; } }
+            else if (fState === 'idle' || fState === 'pend') { fState = 'pstart'; fSince = now; }
+            else if (fState === 'pstart' && now - fSince >= FPSTART_FRAMES * FPSTART_MS) { fState = 'plant'; fSince = now; }
+          } else if (fState === 'pstart' || fState === 'plant') { fState = 'pend'; fSince = now; }
+          else if (fState === 'pend') { if (now - fSince >= FPEND_FRAMES * FPEND_MS) { fState = 'idle'; fSince = now; } }
+          else if (walkingNow) {
             if (fState === 'idle' || fState === 'stop') { fState = 'start'; fSince = now; }
             else if (fState === 'start' && now - fSince >= FSTART_FRAMES * FSTART_MS) { fState = 'move'; fSince = now; }
           } else if (fState === 'start' || fState === 'move') { fState = 'stop'; fSince = now; }
@@ -984,6 +998,9 @@
           if (fState === 'start') showF('fstart', Math.min(FSTART_FRAMES - 1, Math.floor(ft / FSTART_MS)));
           else if (fState === 'move') showF('fmove', Math.floor(ft / FMOVE_MS) % FMOVE_FRAMES);
           else if (fState === 'stop') showF('fstop', Math.min(FSTOP_FRAMES - 1, Math.floor(ft / FSTOP_MS)));
+          else if (fState === 'pstart') showF('fpstart', Math.min(FPSTART_FRAMES - 1, Math.floor(ft / FPSTART_MS)));
+          else if (fState === 'plant') showF('fplant', Math.floor(ft / FPLANT_MS) % FPLANT_FRAMES);
+          else if (fState === 'pend') showF('fpend', Math.min(FPEND_FRAMES - 1, Math.floor(ft / FPEND_MS)));
           else showF('fidle', Math.floor(ft / FIDLE_MS) % FIDLE_FRAMES);
         }
       } else if (pressed && mode === 'follow') {
