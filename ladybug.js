@@ -57,6 +57,7 @@
   var PRESS_TRIM = [0.75, 1];  // and each time it may also be cut short, to this share of its length
   var LOOP_START = 0.06;       // held click: the loop starts at this share of its full level (a quiet start)
   var HOLD_WALK_RATE = 0.5;    // held click: the walk sound slows to this multiple of its speed (and drops in pitch with it)
+  var HOLD_DELAY_MS = 250;     // held click: how long you must hold before the loops begin (a quick click only gets the press and release sounds)
   var HOLD_RAMP_MS = 6000;     // held click: how long the loop and the scream take to swell to full
   var SCREAM_PITCH_END = 1.5;  // the scream rises to this multiple of its normal pitch by then
 
@@ -185,7 +186,7 @@
   var sound = {
     scurryStart: function () {},   // the ladybug started scurrying (following, chasing or wandering)
     scurryStop: function () {},    // it came to rest
-    squish: function () { audio.shot('press', PRESS_VOLUME); audio.holdStart(); },   // a click went down
+    squish: function () { audio.shot('press', PRESS_VOLUME); },   // a click went down (the held sounds start a moment later, in the frame loop)
     release: function () { audio.holdStop(); audio.shot('release', RELEASE_VOLUME); } // a click was let go
   };
 
@@ -287,6 +288,7 @@
   var out = false;                  // is the ladybug on screen?
   var lastTick = 0;
   var lastInput = 0;                // when the mouse (or the page) last moved
+  var holdStarted = false;           // have the held-click loops begun?
   var lastBx = 0, lastBy = 0, speedNow = 0;   // for the scurry sound: how fast the ladybug is moving (px per second)
 
   // wander-mode state
@@ -606,6 +608,7 @@
     releaseWanted = false;
     releaseAt = 0;
     pressAt = performance.now();
+    holdStarted = false;
     sound.squish();
   }
 
@@ -704,7 +707,13 @@
       audio.walk((0.55 + 0.5 * Math.log(1 + speedNow / 60)) * (holding ? HOLD_WALK_RATE : 1), level);
       audio.pan((bx / Math.max(window.innerWidth, 1)) * 2 - 1);   // follows the ladybug across the window
       soundPlaying = level > 0 && audio.live();
-      if (pressed && !releaseWanted) audio.hold(Math.min(1, (now - pressAt) / HOLD_RAMP_MS));   // a held click swells
+      if (pressed && !releaseWanted) {                       // a held click: after a short wait the loops begin, then swell
+        var heldFor = now - pressAt - HOLD_DELAY_MS;
+        if (heldFor >= 0) {
+          if (!holdStarted) { holdStarted = true; audio.holdStart(); }
+          audio.hold(Math.min(1, heldFor / HOLD_RAMP_MS));
+        }
+      }
 
       if (mode === 'follow') {
         // legs: at most one frame per refresh, so quick movement never skips round the cycle
