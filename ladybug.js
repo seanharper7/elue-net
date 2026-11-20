@@ -10,6 +10,7 @@
      meanwhile. When the mouse comes back out, the ladybug runs over to it.
    - It has a soft drop shadow, and leaves footprints where its feet land (three at a time, like a real
      insect: left-front, right-middle and left-back, then the other three) that fade after a couple of seconds.
+   - (The flower pointer never wanders: left alone, or when the mouse goes over a video, it stays planted, and grows again where the mouse comes back.)
    - Leave the mouse still for a few seconds and the ladybug wanders off the same way; move the mouse
      and it runs back to it.
    - Hold a click until the page has turned fully red and the ladybug explodes (/ladybug/explode-0..4.png). A flower
@@ -634,8 +635,9 @@
 
   function petTick(now, dt) {
     petWalking = false;
-    if (stage !== 'flower') { if (petOn) petHide(); petAt = 0; return; }
+    if (stage === 'bug' || stage === 'explode') { if (petOn) petHide(); petAt = 0; return; }
     if (!petOn) {
+      if (stage !== 'flower') return;
       if (!petAt) petAt = now + PET_DELAY_MS;
       if (now < petAt) return;
       petSpawn();
@@ -742,9 +744,16 @@
 
     setOut(true);
     if (mode === 'wander') {
-      // the mouse is back out: run to it
-      setMode('chase');
       videoEl = null;
+      if (stage === 'flower') {
+        // the flower stayed planted while the mouse was out of sight: it grows again where the mouse is now
+        bx = x; by = y; anchorX = x; anchorY = y; lastBx = bx; lastBy = by;
+        setMode('follow');
+        stage = 'spawn'; stageAt = now;
+      } else {
+        // the mouse is back out: run to it
+        setMode('chase');
+      }
     }
 
     if (mode === 'follow') {
@@ -810,7 +819,7 @@
             curve = (Math.random() * 2 - 1) * WANDER_TURN;
             curveUntil = clock + rand(STEER_RANGE);
           }
-          if (!resting) {
+          if (!resting && stage !== 'flower') {              // the flower pointer doesn't wander: it stays planted where it lost the mouse
             target += curve * dt / 1000;
             // keep off the video player and inside the window: steer away or back in
             var W = window.innerWidth, H = window.innerHeight;
@@ -876,9 +885,10 @@
       var holding = pressed && !releaseWanted;
       if (holding !== shadowHeld) { shadowHeld = holding; bug.style.filter = holding ? SHADOW_HELD : SHADOW; }
       // wandering (the mouse was left still, or it's over a video) or a held click: turn it way down
-      var level = stage === 'flower' ? (petWalking && !muted && !document.hidden ? IDLE_VOLUME : 0)   // the wandering ladybug's scurry, at wander volume
+      var petStage = stage === 'flower' || (stage === 'spawn' && petOn);
+      var level = petStage ? (petWalking && !muted && !document.hidden ? IDLE_VOLUME : 0)   // the wandering ladybug's scurry, at wander volume
         : (!audible || muted || stage !== 'bug' ? 0 : (mode === 'wander' || holding ? IDLE_VOLUME : 1));
-      var sndX = stage === 'flower' ? px : bx, sndSpeed = stage === 'flower' ? PET_SPEED : speedNow;
+      var sndX = petStage ? px : bx, sndSpeed = petStage ? PET_SPEED : speedNow;
       // 85 px/s (its wandering pace) plays the recording as it is; faster scampering rises, slower slows down.
       // While a click is held it drags along at half speed, pitched down.
       audio.walk((0.55 + 0.5 * Math.log(1 + sndSpeed / 60)) * (holding && stage === 'bug' ? HOLD_WALK_RATE : 1), level);
@@ -918,7 +928,7 @@
           sound.scurryStop();
         }
         // the mouse has been left still for a while: off it wanders
-        if (out && !pressed && now - lastInput > IDLE_MS) startWander(null, now);
+        if (out && !pressed && stage === 'bug' && now - lastInput > IDLE_MS) startWander(null, now);   // the flower just stays planted
       }
 
       var walkingNow = legsGoing || (mode === 'follow' && moving);
