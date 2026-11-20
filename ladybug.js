@@ -47,15 +47,15 @@
   var SCURRY_VOLUME = 0.8;     // 0..1, for each sound in turn
   var PRESS_VOLUME = 1;
   var RELEASE_VOLUME = 0.708;  // 3 dB down from the recording
-  var LOOP_VOLUME = 16;        // the held-click recordings are recorded quiet, so these are boosted (above 1 = louder than the file)
-  var SCREAM_VOLUME = 24;
+  var LOOP_VOLUME = 10.1;        // the held-click recordings are recorded quiet, so these are boosted (above 1 = louder than the file)
+  var SCREAM_VOLUME = 15.1;
   var SCURRY_RATE_MIN = 0.25;  // walk sound: slowest it ever plays (1 = the recording as it is)
   var SCURRY_RATE_MAX = 2.4;   // fastest
   var IDLE_VOLUME = 0.12;      // walk sound while it wanders (mouse left still, or over a video), as a share of full volume
   var PAN_WIDTH = 0.9;         // how far the sound swings to each side: 0 = stays centred, 1 = fully into one ear at the window edge
   var PRESS_PITCH = 0.1;       // press and release: pitch (and so length) varies by up to this much either way, each time
   var PRESS_TRIM = [0.75, 1];  // and each time it may also be cut short, to this share of its length
-  var LOOP_START = 0.06;       // held click: the loop starts at this share of its full level (a quiet start)
+  var LOOP_START = 0.095;       // held click: the loop starts at this share of its full level (a quiet start)
   var HOLD_WALK_RATE = 0.5;    // held click: the walk sound slows to this multiple of its speed (and drops in pitch with it)
   var HOLD_DELAY_MS = 250;     // held click: how long you must hold before the loops begin (a quick click only gets the press and release sounds)
   var HOLD_RAMP_MS = 6000;     // held click: how long the loop and the scream take to swell to full
