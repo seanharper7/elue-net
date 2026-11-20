@@ -18,6 +18,9 @@
 
    Art lives in /ladybug/ (walk-0..7.png, click-0..4.png), all 64x64 and facing up.
    Everything it needs to look right is set in this file, so it doesn't depend on style.css.
+   - Sound: a scurry loop that speeds up and slows with the ladybug, pans left and right with where it is,
+     and turns way down when it has wandered off because the mouse sat still. A mute button (top-left,
+     art in /volume/) and the M key switch it off; a big "M to mute audio" appears once per visit.
    The scurrying sound (/ladybug/walk-loop.mp3) is wired in below. The `sound` functions are still empty
    on purpose: that's where the squish and release sounds will plug in later. */
 
@@ -39,11 +42,17 @@
   var SCURRY_VOLUME = 0.8;     // 0..1
   var SCURRY_RATE_MIN = 0.5;   // slowest it ever plays (1 = the recording as it is)
   var SCURRY_RATE_MAX = 2.4;   // fastest
+  var IDLE_VOLUME = 0.12;      // how loud it is (as a share of the full volume) when it has wandered off because the mouse sat still
+  var PAN_WIDTH = 0.9;         // how far the sound swings to each side: 0 = stays centred, 1 = fully into one ear at the window edge
   var scurry = (function () {
     var AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC || !window.fetch) return { set: function () {} };
-    var ctx = null, gain = null, src = null, raw = null, decoding = false, buffer = null;
-    try { ctx = new AC(); gain = ctx.createGain(); gain.gain.value = 0; gain.connect(ctx.destination); } catch (e) { return { set: function () {} }; }
+    if (!AC || !window.fetch) return { set: function () {}, live: function () { return false; } };
+    var ctx = null, gain = null, panner = null, src = null, raw = null, decoding = false, buffer = null;
+    try {
+      ctx = new AC();
+      gain = ctx.createGain(); gain.gain.value = 0; gain.connect(ctx.destination);
+      if (ctx.createStereoPanner) { panner = ctx.createStereoPanner(); panner.connect(gain); }
+    } catch (e) { return { set: function () {}, live: function () { return false; } }; }
     fetch(SCURRY_URL).then(function (r) { return r.arrayBuffer(); }).then(function (a) { raw = a; build(); }).catch(function () {});
     function build() {
       if (src || !raw || decoding || ctx.state !== 'running') return;
@@ -58,7 +67,7 @@
       src = ctx.createBufferSource();
       src.buffer = buffer;
       src.loop = true;
-      src.connect(gain);
+      src.connect(panner || gain);
       src.start(0);
     }
     function unlock() {
@@ -69,13 +78,15 @@
     function off() { for (var i = 0; i < evs.length; i++) window.removeEventListener(evs[i], unlock, true); }
     for (var i = 0; i < evs.length; i++) window.addEventListener(evs[i], unlock, true);
     ctx.onstatechange = build;
-    // rate: how fast the legs are going; level: 0 = silent, 1 = full
+    // rate: how fast the legs are going; level: 0 = silent, 1 = full; pan: -1 = far left .. 1 = far right
     return {
-      set: function (rate, level) {
+      live: function () { return !!src; },
+      set: function (rate, level, pan) {
         if (!src) return;
         var t = ctx.currentTime;
         src.playbackRate.setTargetAtTime(Math.min(SCURRY_RATE_MAX, Math.max(SCURRY_RATE_MIN, rate)), t, 0.04);
-        gain.gain.setTargetAtTime(level * SCURRY_VOLUME, t, 0.05);
+        gain.gain.setTargetAtTime(level * SCURRY_VOLUME, t, 0.08);
+        if (panner) panner.pan.setTargetAtTime(Math.min(1, Math.max(-1, pan)) * PAN_WIDTH, t, 0.04);
       }
     };
   })();
@@ -191,6 +202,120 @@
   function place() {
     bug.style.transform = 'translate3d(' + (bx - SIZE / 2) + 'px,' + (by - SIZE / 2) + 'px,0)';
     rot.style.transform = 'rotate(' + heading + 'deg)';
+  }
+
+  // ---- mute button and the "M to mute audio" notice ----
+  // The button sits in the top-left corner (press M to do the same). The choice is remembered between pages.
+  var muted = false, soundPlaying = false;
+  try { muted = window.localStorage.getItem('elue-muted') === '1'; } catch (e) {}
+
+  var ICON_PX = 36;
+  var ICON_FRAMES = { on: 12, turnoff: 8, off: 4 };
+  var ICON_ON_MS = 100;        // sound-on icon: time per frame (it moves only while the ladybug is making noise)
+  var ICON_TURN_MS = 40;       // time per frame turning on or off
+  var ICON_OFF_MS = 125;       // crossed-out icon: time per frame
+  var HINT_MS = 4200;          // how long the big "M to mute audio" stays up
+
+  var muteBtn = document.createElement('button');
+  muteBtn.id = 'elue-mute';
+  muteBtn.type = 'button';
+  muteBtn.setAttribute('data-flower-ignore', '');
+  muteBtn.style.cssText = 'position:fixed;left:10px;top:10px;width:' + ICON_PX + 'px;height:' + ICON_PX + 'px;' +
+    'margin:0;padding:0;border:0;background:none;z-index:2147483000;';
+  var iconSets = {};
+  Object.keys(ICON_FRAMES).forEach(function (kind) {
+    iconSets[kind] = [];
+    for (var i = 0; i < ICON_FRAMES[kind]; i++) {
+      var im = new Image();
+      im.alt = '';
+      im.draggable = false;
+      im.style.cssText = 'position:absolute;left:0;top:0;width:' + ICON_PX + 'px;height:' + ICON_PX + 'px;' +
+        'user-select:none;-webkit-user-drag:none;visibility:hidden;pointer-events:none;';
+      im.src = '/volume/' + kind + '-' + i + '.png';
+      muteBtn.appendChild(im);
+      iconSets[kind].push(im);
+    }
+  });
+  var iconShown = null;
+  function showIcon(kind, i) {
+    var next = iconSets[kind][i];
+    if (next === iconShown) return;
+    if (iconShown) iconShown.style.visibility = 'hidden';
+    next.style.visibility = 'visible';
+    iconShown = next;
+  }
+  var iconState = muted ? 'off' : 'on';   // 'on', 'off', or 'turn' (the switch animation)
+  var turnPos = 0, turnDir = 1;           // where in the switch animation, and which way it's playing
+  var iconT0 = 0, onPos = 0, iconLast = 0;
+
+  function muteIcon(now) {
+    var dt = iconLast ? Math.min(now - iconLast, 100) : 0;
+    iconLast = now;
+    if (iconState === 'turn') {
+      turnPos += turnDir * dt / ICON_TURN_MS;
+      if (turnPos >= ICON_FRAMES.turnoff) { iconState = 'off'; iconT0 = now; }
+      else if (turnPos < 0) { iconState = 'on'; onPos = 0; }
+    }
+    if (iconState === 'turn') showIcon('turnoff', Math.max(0, Math.min(ICON_FRAMES.turnoff - 1, Math.floor(turnPos))));
+    else if (iconState === 'off') showIcon('off', Math.floor((now - iconT0) / ICON_OFF_MS) % ICON_FRAMES.off);
+    else {
+      // moves while the ladybug is making noise, then finishes the loop and rests on the first frame
+      var n = onPos + dt / ICON_ON_MS, N = ICON_FRAMES.on;
+      if (!soundPlaying && Math.floor(n / N) > Math.floor(onPos / N)) n = Math.floor(n / N) * N;
+      if (soundPlaying || onPos % N !== 0) onPos = n;
+      showIcon('on', Math.floor(onPos) % N);
+    }
+  }
+
+  function setMuted(m) {
+    if (m === muted) return;
+    muted = m;
+    try { window.localStorage.setItem('elue-muted', m ? '1' : '0'); } catch (e) {}
+    muteBtn.setAttribute('aria-pressed', m ? 'true' : 'false');
+    muteBtn.setAttribute('aria-label', m ? 'Unmute audio' : 'Mute audio');
+    muteBtn.title = m ? 'Unmute (M)' : 'Mute (M)';
+    if (iconState === 'turn') turnDir = m ? 1 : -1;
+    else { iconState = 'turn'; turnDir = m ? 1 : -1; turnPos = m ? 0 : ICON_FRAMES.turnoff - 0.01; }
+    hideHint();
+  }
+  muteBtn.setAttribute('aria-pressed', muted ? 'true' : 'false');
+  muteBtn.setAttribute('aria-label', muted ? 'Unmute audio' : 'Mute audio');
+  muteBtn.title = muted ? 'Unmute (M)' : 'Mute (M)';
+  muteBtn.addEventListener('click', function () { setMuted(!muted); });
+  window.addEventListener('keydown', function (e) {
+    if ((e.key !== 'm' && e.key !== 'M') || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+    var t = e.target, tag = t && t.nodeName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (t && t.isContentEditable)) return;
+    setMuted(!muted);
+  });
+
+  css.textContent += '#elue-mute:focus-visible{outline:2px solid #000;outline-offset:2px;}';
+  showIcon(iconState, 0);
+  document.body.appendChild(muteBtn);
+
+  // the big notice, once per visit (not again on every page), and not if they've already muted
+  var hint = null, hintTimer = 0;
+  function hideHint() {
+    if (!hint) return;
+    clearTimeout(hintTimer);
+    var h = hint; hint = null;
+    h.style.opacity = '0';
+    setTimeout(function () { if (h.parentNode) h.parentNode.removeChild(h); }, 900);
+  }
+  var hintSeen = false;
+  try { hintSeen = window.sessionStorage.getItem('elue-hint') === '1'; window.sessionStorage.setItem('elue-hint', '1'); } catch (e) {}
+  if (!muted && !hintSeen) {
+    hint = document.createElement('div');
+    hint.setAttribute('aria-hidden', 'true');
+    hint.setAttribute('data-flower-ignore', '');
+    hint.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2147483000;' +
+      'pointer-events:none;white-space:nowrap;background:rgba(255,255,255,0.94);padding:0.3em 0.6em;' +
+      'font:700 clamp(2rem,8vw,5.5rem)/1.1 "Inter",-apple-system,"Helvetica Neue",Arial,sans-serif;letter-spacing:-0.02em;' +
+      'color:#000;opacity:0;transition:opacity 0.5s ease;';
+    hint.innerHTML = '<span style="display:inline-block;border:0.07em solid #000;padding:0 0.22em;margin-right:0.25em;">M</span>to mute audio';
+    document.body.appendChild(hint);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { if (hint) hint.style.opacity = '1'; }); });
+    hintTimer = setTimeout(hideHint, HINT_MS);
   }
 
   // ---- footprints ----
@@ -469,8 +594,12 @@
       lastBx = bx; lastBy = by;
       if (dt > 0) speedNow += (Math.sqrt(mdx * mdx + mdy * mdy) / dt * 1000 - speedNow) * (1 - Math.exp(-dt / 120));
       var audible = out && !pressed && !document.hidden && (legsGoing || (mode === 'follow' && moving));
+      var idleWander = mode === 'wander' && !videoEl;      // it wandered off because the mouse sat still: turn it way down
+      var level = !audible || muted ? 0 : (idleWander ? IDLE_VOLUME : 1);
+      var pan = (bx / Math.max(window.innerWidth, 1)) * 2 - 1;   // follows the ladybug across the window
       // 85 px/s (its wandering pace) plays the recording as it is; faster scampering rises, slower slows down
-      scurry.set(0.55 + 0.5 * Math.log(1 + speedNow / 60), audible ? 1 : 0);
+      scurry.set(0.55 + 0.5 * Math.log(1 + speedNow / 60), level, pan);
+      soundPlaying = level > 0 && scurry.live();
 
       if (mode === 'follow') {
         // legs: at most one frame per refresh, so quick movement never skips round the cycle
@@ -512,6 +641,7 @@
         show('walk', walking ? wf : 0);
       }
     }
+    muteIcon(now);
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);

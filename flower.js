@@ -58,6 +58,7 @@
         if (!n.nodeValue || !/\S/.test(n.nodeValue)) return NodeFilter.FILTER_REJECT;
         var tag = n.parentNode && n.parentNode.nodeName;
         if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') return NodeFilter.FILTER_REJECT;
+        if (n.parentNode.closest && n.parentNode.closest('[data-flower-ignore]')) return NodeFilter.FILTER_REJECT;   // fixed extras (the mute button and notice)
         return NodeFilter.FILTER_ACCEPT;
       }
     });
@@ -71,6 +72,7 @@
     for (var j = 0; j < all.length; j++) {
       var el = all[j];
       if (el === box || box.contains(el) || el.id === 'ladybug' || el.nodeName === 'CANVAS') continue;
+      if (el.closest && el.closest('[data-flower-ignore]')) continue;
       var tn = el.nodeName;
       if (tn === 'IMG' || tn === 'IFRAME' || tn === 'VIDEO' || tn === 'SVG' || tn === 'svg') { addRect(el.getBoundingClientRect()); continue; }
       var cs = window.getComputedStyle(el);
