@@ -82,11 +82,14 @@
     var buffers = {}, walkSrc = null, walkGain = null, held = null;
 
     Object.keys(SOUND_URLS).forEach(function (name) {
-      fetch(SOUND_URLS[name]).then(function (r) { return r.arrayBuffer(); }).then(function (raw) {
+      fetch(SOUND_URLS[name]).then(function (r) {
+        if (!r.ok) throw new Error(r.status + ' ' + SOUND_URLS[name]);
+        return r.arrayBuffer();
+      }).then(function (raw) {
         var ok = function (b) { buffers[name] = b; if (name === 'walk') startWalk(); };
         var p = ctx.decodeAudioData(raw, ok, noop);    // callback form works in older Safari too
-        if (p && p.catch) p.catch(noop);
-      }).catch(noop);
+        if (p && p.catch) p.catch(function (e) { if (window.console) console.warn('ladybug: could not decode ' + SOUND_URLS[name]); });
+      }).catch(function (e) { if (window.console) console.warn('ladybug: sound missing: ' + e.message); });
     });
 
     function startWalk() {
@@ -131,10 +134,10 @@
 
     // a held click: both loops begin together, at silence
     function holdStart() {
-      if (!buffers.loop || !buffers.scream) return;
       holdStop();
       var t = ctx.currentTime, h = {};
       ['loop', 'scream'].forEach(function (n) {
+        if (!buffers[n]) { h[n] = null; return; }   // if one is missing the other still plays
         var g = ctx.createGain(); g.gain.value = 0; g.connect(bus);
         var s = ctx.createBufferSource(); s.buffer = buffers[n]; s.loop = true; s.connect(g); s.start(t);
         h[n] = { src: s, gain: g };
@@ -144,15 +147,18 @@
     function hold(p) {   // p: how far through the swell, 0..1
       if (!held) return;
       var t = ctx.currentTime;
-      held.loop.gain.gain.setTargetAtTime(LOOP_VOLUME * (LOOP_START + (1 - LOOP_START) * p), t, 0.05);   // already audible at once, then swells
-      held.scream.gain.gain.setTargetAtTime(SCREAM_VOLUME * Math.pow(p, 1.5), t, 0.05);               // from silence
-      held.scream.src.playbackRate.setTargetAtTime(1 + (SCREAM_PITCH_END - 1) * p, t, 0.05);
+      if (held.loop) held.loop.gain.gain.setTargetAtTime(LOOP_VOLUME * (LOOP_START + (1 - LOOP_START) * p), t, 0.05);   // already audible at once, then swells
+      if (held.scream) {
+        held.scream.gain.gain.setTargetAtTime(SCREAM_VOLUME * Math.pow(p, 1.5), t, 0.05);                              // from silence
+        held.scream.src.playbackRate.setTargetAtTime(1 + (SCREAM_PITCH_END - 1) * p, t, 0.05);
+      }
     }
     function holdStop() {
       if (!held) return;
       var t = ctx.currentTime, h = held;
       held = null;
       ['loop', 'scream'].forEach(function (n) {
+        if (!h[n]) return;
         h[n].gain.gain.setTargetAtTime(0, t, 0.04);
         h[n].src.stop(t + 0.4);
       });
