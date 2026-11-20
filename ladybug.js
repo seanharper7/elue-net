@@ -47,8 +47,8 @@
   var SCURRY_VOLUME = 0.8;     // 0..1, for each sound in turn
   var PRESS_VOLUME = 1;
   var RELEASE_VOLUME = 1;
-  var LOOP_VOLUME = 1;
-  var SCREAM_VOLUME = 1;
+  var LOOP_VOLUME = 8;         // the held-click recordings are recorded quiet, so these are boosted (above 1 = louder than the file)
+  var SCREAM_VOLUME = 14;
   var SCURRY_RATE_MIN = 0.5;   // walk sound: slowest it ever plays (1 = the recording as it is)
   var SCURRY_RATE_MAX = 2.4;   // fastest
   var IDLE_VOLUME = 0.12;      // walk sound while it wanders (mouse left still, or over a video), as a share of full volume
