@@ -220,6 +220,8 @@
   var SHADOW = 'drop-shadow(2px 3px 2px rgba(0,0,0,0.35))';   // same direction however it turns
   var SHADOW_HELD = 'drop-shadow(2px 3px 0.5px rgba(0,0,0,0.35))'; // while a click is held it tightens: a smaller blur radius
   var SHADOW_EASE_MS = 120;    // how quickly the shadow tightens and relaxes
+  var BG_RED = [254, 53, 33];  // the ladybug's own red (read from its art)
+  var BG_RELEASE_MS = 800;     // after a hold, how long the page takes to go back to white
   var FOOT_PX = 13;            // how far it walks between steps
   // Where the feet touch down, measured from the middle of the ladybug in the art (64px, facing up):
   // out almost to the edge of the sprite on each side (28.8 px of the 32; was the full 32 until trimmed 10%); front feet 20 px ahead, middle level, back feet 22 px behind.
@@ -291,6 +293,7 @@
   var out = false;                  // is the ladybug on screen?
   var lastTick = 0;
   var lastInput = 0;                // when the mouse (or the page) last moved
+  var bgAmt = 0, bgShown = '';       // how far the page has turned red (0 = white, 1 = the ladybug's red)
   var shadowHeld = false;            // is the shadow in its tightened (click held) state?
   var holdStarted = false;           // have the held-click loops begun?
   var lastBx = 0, lastBy = 0, speedNow = 0;   // for the scurry sound: how fast the ladybug is moving (px per second)
@@ -719,6 +722,11 @@
           audio.hold(Math.min(1, heldFor / HOLD_RAMP_MS));
         }
       }
+      // the page slowly turns the ladybug's red while a click is held (same slow build as the sound), then back to white
+      if (holding && now - pressAt - HOLD_DELAY_MS > 0) bgAmt = Math.min(1, (now - pressAt - HOLD_DELAY_MS) / HOLD_RAMP_MS);
+      else if (bgAmt > 0) bgAmt = Math.max(0, bgAmt - dt / BG_RELEASE_MS);
+      var bgNow = bgAmt <= 0 ? '' : 'rgb(' + BG_RED.map(function (c) { return Math.round(255 + (c - 255) * bgAmt); }).join(',') + ')';
+      if (bgNow !== bgShown) { bgShown = bgNow; document.body.style.backgroundColor = bgNow; }
 
       if (mode === 'follow') {
         // legs: at most one frame per refresh, so quick movement never skips round the cycle
