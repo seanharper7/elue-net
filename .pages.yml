@@ -55,18 +55,14 @@ content:
       - name: description
         label: One or two lines about it
         type: text
-      - name: link_label
-        label: Link text
-        type: string
-        description: For example "Listen on Bandcamp" or "Watch on YouTube".
       - name: link_url
         label: Link address
         type: string
-        description: The full web address, starting with https://
+        description: The full web address, starting with https://. The title becomes a link to it.
       - name: embed
         label: Show the video in the page
         type: boolean
-        description: Only for YouTube or Vimeo links. Turn on to play the video right here.
+        description: Only for YouTube or Vimeo links. Turn on to play the video right here (then the title is not a link, the player is).
 
   - name: personal
     label: Personal work (its own page)
@@ -85,14 +81,10 @@ content:
       - name: description
         label: One or two lines about it
         type: text
-      - name: link_label
-        label: Link text
-        type: string
-        description: For example "Listen on Bandcamp" or "Watch on YouTube".
       - name: link_url
         label: Link address
         type: string
-        description: The full web address, starting with https://. Leave empty for no link.
+        description: The full web address, starting with https://. The title becomes a link to it. Leave empty for no link.
 
   - name: youtube
     label: YouTube highlights (Personal work page)
@@ -111,17 +103,13 @@ content:
       - name: description
         label: One line about it (optional)
         type: text
-      - name: link_label
-        label: Link text
-        type: string
-        description: For example "Watch on YouTube".
       - name: link_url
         label: Video address
         type: string
         description: The full web address of the YouTube video, starting with https://. The video plays right on the page.
 
   - name: social
-    label: Social links (footer and Contact page)
+    label: Social links (icons beside your name)
     type: file
     path: _data/links.yml
     format: yaml
@@ -137,6 +125,10 @@ content:
         type: string
         required: true
         description: The full web address, starting with https://
+      - name: icon
+        label: Icon (optional)
+        type: image
+        description: A small square picture shown beside your name. Without one, the link shows as plain text.
 
   - name: services
     label: Services

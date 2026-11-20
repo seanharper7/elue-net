@@ -8,12 +8,9 @@ description: Sean Harper's own music and projects, released as Elue.
       <p class="lede">{{ site.data.text.personal_intro | escape }}</p>
 {% for w in site.data.personal %}
       <article class="work">
-        <h2><span>{{ w.title | escape }}</span>{% if w.year and w.year != '' %} <span class="year">{{ w.year | escape }}</span>{% endif %}</h2>
+        <h2><span>{% if w.link_url and w.link_url != '' %}<a href="{{ w.link_url | escape }}">{{ w.title | escape }}</a>{% else %}{{ w.title | escape }}{% endif %}</span>{% if w.year and w.year != '' %} <span class="year">{{ w.year | escape }}</span>{% endif %}</h2>
         {%- if w.description and w.description != '' %}
         <p>{{ w.description | escape }}</p>
-        {%- endif %}
-        {%- if w.link_url and w.link_url != '' %}
-        <p class="go"><a href="{{ w.link_url | escape }}">{{ w.link_label | default: 'Listen or watch' | escape }}</a></p>
         {%- endif %}
       </article>
 {% endfor %}
@@ -25,9 +22,6 @@ description: Sean Harper's own music and projects, released as Elue.
         <h2><span>{{ v.title | escape }}</span>{% if v.year and v.year != '' %} <span class="year">{{ v.year | escape }}</span>{% endif %}</h2>
         {%- if v.description and v.description != '' %}
         <p>{{ v.description | escape }}</p>
-        {%- endif %}
-        {%- if v.link_url and v.link_url != '' %}
-        <p class="go"><a href="{{ v.link_url | escape }}">{{ v.link_label | default: 'Watch on YouTube' | escape }}</a></p>
         {%- endif %}
       </article>
 {% endfor %}

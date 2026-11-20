@@ -26,10 +26,11 @@
   <div class="page">
     <header class="masthead">
       <div class="brand">
-        <div>
+        <div class="name-row">
           <p class="name"><a href="/">{{ site_info.name | escape }}</a></p>
-          <p class="role">{{ site_info.tagline | escape }}</p>
+{% include social.html %}
         </div>
+        <p class="role">{{ site_info.tagline | escape }}</p>
       </div>
       <nav aria-label="Main">
         <ul>
@@ -48,7 +49,6 @@
 {% unless page.footer == false %}
     <footer>
       <p>To hire me: <a href="mailto:{{ site_info.email | escape }}">{{ site_info.email | escape }}</a></p>
-{% include social.html %}
     </footer>
 {% endunless %}
   </div>

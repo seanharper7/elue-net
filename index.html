@@ -10,12 +10,8 @@ description: Sean Harper is a composer, sound designer and producer. Scoring for
         {%- if has_video %}
         {%- if f.video_service == 'youtube' %}
         {%- capture embed_src %}https://www.youtube-nocookie.com/embed/{{ f.video_id }}{% endcapture %}
-        {%- capture watch_url %}https://www.youtube.com/watch?v={{ f.video_id }}{% endcapture %}
-        {%- assign watch_label = 'Watch on YouTube' %}
         {%- else %}
         {%- capture embed_src %}https://player.vimeo.com/video/{{ f.video_id }}{% endcapture %}
-        {%- capture watch_url %}https://vimeo.com/{{ f.video_id }}{% endcapture %}
-        {%- assign watch_label = 'Watch on Vimeo' %}
         {%- endif %}
         <div class="video">
           <iframe src="{{ embed_src }}" title="{{ f.title | escape }}" loading="lazy" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
@@ -23,9 +19,6 @@ description: Sean Harper is a composer, sound designer and producer. Scoring for
         {%- endif %}
         <h2 id="feature-title"><span>{{ f.title | escape }}</span> <span class="year">{{ f.year | escape }}</span></h2>
         <p>{{ f.description | escape }}</p>
-        {%- if has_video %}
-        <p class="go"><a href="{{ watch_url }}">{{ watch_label }}</a></p>
-        {%- endif %}
       </section>
 
       <p class="section-label">More work</p>
@@ -34,10 +27,8 @@ description: Sean Harper is a composer, sound designer and producer. Scoring for
         {%- if w.embed %}
         {% include video-embed.html url=w.link_url title=w.title %}
         {%- endif %}
-        <h2><span>{{ w.title | escape }}</span>{% if w.year and w.year != '' %} <span class="year">{{ w.year | escape }}</span>{% endif %}</h2>
+        {%- comment %} The title is the link, except when the video is shown right here (the player links itself). {%- endcomment %}
+        <h2><span>{% if w.link_url and w.link_url != '' and w.embed != true %}<a href="{{ w.link_url | escape }}">{{ w.title | escape }}</a>{% else %}{{ w.title | escape }}{% endif %}</span>{% if w.year and w.year != '' %} <span class="year">{{ w.year | escape }}</span>{% endif %}</h2>
         <p>{{ w.description | escape }}</p>
-        {%- if w.link_url and w.link_url != '' %}
-        <p class="go"><a href="{{ w.link_url | escape }}">{{ w.link_label | default: 'Listen or watch' | escape }}</a></p>
-        {%- endif %}
       </article>
 {% endfor %}

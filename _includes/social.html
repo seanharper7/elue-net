@@ -1,7 +1,11 @@
 {%- if site.data.links and site.data.links.size > 0 %}
-      <ul class="social">
+        <ul class="social" aria-label="Elsewhere">
 {%- for l in site.data.links %}
-        <li><a href="{{ l.url | escape }}" rel="me noopener">{{ l.label | escape }}</a></li>
+{%- if l.icon and l.icon != '' %}
+          <li><a href="{{ l.url | escape }}" rel="me noopener" aria-label="{{ l.label | escape }}" title="{{ l.label | escape }}"><img src="{{ l.icon | escape }}" alt="" width="36" height="36"></a></li>
+{%- else %}
+          <li class="text-link"><a href="{{ l.url | escape }}" rel="me noopener">{{ l.label | escape }}</a></li>
+{%- endif %}
 {%- endfor %}
-      </ul>
+        </ul>
 {%- endif -%}
