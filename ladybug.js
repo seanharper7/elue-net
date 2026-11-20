@@ -13,8 +13,9 @@
    - (The flower pointer never wanders: left alone, or when the mouse goes over a video, it stays planted, and grows again where the mouse comes back.)
    - Leave the mouse still for a few seconds and the ladybug wanders off the same way; move the mouse
      and it runs back to it.
-   - Hold a click until the page has turned fully red and the ladybug explodes (/ladybug/explode-0..4.png). A flower
-     grows where it was (/flower/mouse-spawn-0..7.png) and is the pointer from then on, for the rest of the visit:
+   - Hold a click until the page has turned fully red and the ladybug explodes (/ladybug/explode-0..4.png). If that
+     happens anywhere but on top of the page's flower, a new ladybug just runs in from a random angle to the mouse.
+     If it happens on the flower, a flower grows where it was (/flower/mouse-spawn-0..7.png) and is the pointer from then on, for the rest of the visit:
      mouse-idle (still), mouse-start then mouse-move (heading-turned, while moving), mouse-stop, mouse-click (held).
      The flower is silent except for the click sounds, leaves no footprints, and the red page is a ladybug-only effect.
    - Once the flower is the pointer, the page's own flower (flower.js) disappears and a second ladybug walks in from the
@@ -349,7 +350,7 @@
   // The pointer's life: the ladybug ('bug'); then, when a click is held until the page is fully red, it
   // blows up ('explode'), a flower grows where it was ('spawn'), and the flower is the pointer from then on ('flower').
   // The flower stays for the rest of this visit (this tab), across pages; a new visit starts with the ladybug again.
-  var stage = 'bug', stageAt = 0;
+  var stage = 'bug', stageAt = 0, explodeOver = false;   // explodeOver: did it blow up on top of the page's flower?
   var fState = 'idle', fSince = 0;   // flower pointer: 'idle' | 'start' | 'move' | 'stop'
   var bgReleaseMs = BG_RELEASE_MS;
   // After the explosion a second ladybug walks back in from the edge of the window and wanders by itself.
@@ -690,6 +691,29 @@
     }
   }
 
+  // Is this spot (window coordinates) on top of the page's own flower (flower.js)?
+  function overPageFlower(cx, cy) {
+    var f = document.getElementById('flower');
+    if (!f || f.style.display === 'none' || f.style.visibility !== 'visible') return false;
+    var r = f.getBoundingClientRect(), m = 8;
+    return cx > r.left - m && cx < r.right + m && cy > r.top - m && cy < r.bottom + m;
+  }
+
+  // A fresh ladybug appears just outside the window at a random angle from the mouse and runs in to it.
+  function runIn(now) {
+    var W = window.innerWidth, H = window.innerHeight, a = Math.random() * Math.PI * 2;
+    var dx = Math.sin(a), dy = -Math.cos(a), t = Infinity;
+    if (dx > 1e-6) t = Math.min(t, (W - x) / dx); else if (dx < -1e-6) t = Math.min(t, -x / dx);
+    if (dy > 1e-6) t = Math.min(t, (H - y) / dy); else if (dy < -1e-6) t = Math.min(t, -y / dy);
+    t = Math.max(t, 0) + SIZE;
+    bx = x + dx * t; by = y + dy * t;
+    heading = target = Math.atan2(x - bx, -(y - by)) * 180 / Math.PI;
+    lastBx = bx; lastBy = by;
+    stage = 'bug';
+    setMode('chase');
+    place();
+  }
+
   // a click landed on the wandering ladybug: the pointer is a ladybug again and the page's flower grows back
   function restoreBug() {
     heading = target = pHeading;
@@ -900,11 +924,14 @@
           audio.holdStop();
           audio.shot('release', RELEASE_VOLUME * 1.6);       // stand-in bang until there's a real explosion sound
           stage = 'explode'; stageAt = now;
+          explodeOver = overPageFlower(bx, by);
           pressed = false; releaseWanted = false; releaseAt = 0;
           lastInput = now;                                   // the mouse is down and still: don't wander off on the spot
           bgReleaseMs = BG_EXPLODE_MS;
-          try { window.sessionStorage.setItem('elue-flower', '1'); } catch (e) {}
-          announceFlower(true);
+          if (explodeOver) {                                 // only on top of the flower does the pointer become one
+            try { window.sessionStorage.setItem('elue-flower', '1'); } catch (e) {}
+            announceFlower(true);
+          }
         } else if (heldFor >= 0) {
           if (!holdStarted) { holdStarted = true; audio.holdStart(); }
           audio.hold(Math.min(1, heldFor / HOLD_RAMP_MS));
@@ -935,7 +962,8 @@
       if (stage === 'explode') {
         var ef = Math.floor((now - stageAt) / EXPLODE_MS);
         if (ef < EXPLODE_FRAMES) showF('explode', ef);
-        else { stage = 'spawn'; stageAt = now; showF('fspawn', 0); }
+        else if (explodeOver) { stage = 'spawn'; stageAt = now; showF('fspawn', 0); }
+        else runIn(now);                                   // exploded anywhere else: a new ladybug runs in to the mouse
       } else if (stage === 'spawn') {
         var sf = Math.floor((now - stageAt) / FSPAWN_MS);
         if (sf < FSPAWN_FRAMES) showF('fspawn', sf);
