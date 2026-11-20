@@ -27,6 +27,9 @@ description: Sean Harper is a composer, sound designer and producer. Scoring for
         {%- if w.embed %}
         {% include video-embed.html url=w.link_url title=w.title %}
         {%- endif %}
+        {%- if w.bandcamp_id and w.bandcamp_id != '' %}
+        <iframe class="bandcamp" src="https://bandcamp.com/EmbeddedPlayer/album={{ w.bandcamp_id | escape }}/size=large/bgcol=ffffff/linkcol=000000/tracklist=false/artwork=small/transparent=true/" title="{{ w.title | escape }} on Bandcamp" loading="lazy" seamless>{% if w.link_url %}<a href="{{ w.link_url | escape }}">{{ w.title | escape }} on Bandcamp</a>{% endif %}</iframe>
+        {%- endif %}
         {%- comment %} The title is the link, except when the video is shown right here (the player links itself). {%- endcomment %}
         <h2><span>{% if w.link_url and w.link_url != '' and w.embed != true %}<a href="{{ w.link_url | escape }}">{{ w.title | escape }}</a>{% else %}{{ w.title | escape }}{% endif %}</span>{% if w.year and w.year != '' %} <span class="year">{{ w.year | escape }}</span>{% endif %}</h2>
         <p>{{ w.description | escape }}</p>

@@ -63,6 +63,10 @@ content:
         label: Show the video in the page
         type: boolean
         description: Only for YouTube or Vimeo links. Turn on to play the video right here (then the title is not a link, the player is).
+      - name: bandcamp_id
+        label: Bandcamp album number
+        type: string
+        description: Shows the Bandcamp player under the title. The number is not in the address. On the album page, choose Share / Embed, then Embed this album, and copy the number after album= in the code. Leave empty for no player.
 
   - name: personal
     label: Personal work (its own page)
