@@ -12,6 +12,10 @@
      insect: left-front, right-middle and left-back, then the other three) that fade after a couple of seconds.
    - Leave the mouse still for a few seconds and the ladybug wanders off the same way; move the mouse
      and it runs back to it.
+   - Hold a click until the page has turned fully red and the ladybug explodes (/ladybug/explode-0..4.png). A flower
+     grows where it was (/flower/mouse-spawn-0..7.png) and is the pointer from then on, for the rest of the visit:
+     mouse-idle (still), mouse-start then mouse-move (heading-turned, while moving), mouse-stop, mouse-click (held).
+     The flower is silent except for the click sounds, leaves no footprints, and the red page is a ladybug-only effect.
    - It never fades: it's either there or it isn't.
    - It only runs on devices with a real mouse, and not for people who ask their
      system to reduce motion; those visitors keep their normal pointer.
@@ -221,6 +225,11 @@
   var SHADOW_HELD = 'drop-shadow(2px 3px 0.5px rgba(0,0,0,0.35))'; // while a click is held it tightens: a smaller blur radius
   var SHADOW_EASE_MS = 120;    // how quickly the shadow tightens and relaxes
   var BG_RED = [254, 53, 33];  // the ladybug's own red (read from its art)
+  var EXPLODE_FRAMES = 5, FSPAWN_FRAMES = 8, FIDLE_FRAMES = 4, FSTART_FRAMES = 2, FMOVE_FRAMES = 4, FSTOP_FRAMES = 3, FCLICK_FRAMES = 4;
+  var EXPLODE_MS = 90;         // time per explosion frame
+  var FSPAWN_MS = 100;         // time per frame as the flower grows where the ladybug was
+  var FSTART_MS = 70, FMOVE_MS = 80, FSTOP_MS = 80, FIDLE_MS = 160, FCLICK_MS = 90;   // flower pointer: time per frame
+  var BG_EXPLODE_MS = 250;     // when the ladybug explodes the red clears this fast
   var BG_RELEASE_MS = 800;     // after a hold, how long the page takes to go back to white
   var FOOT_PX = 13;            // how far it walks between steps
   // Where the feet touch down, measured from the middle of the ladybug in the art (64px, facing up):
@@ -253,20 +262,39 @@
   rot.style.cssText = 'position:absolute;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;will-change:transform;';
   bug.appendChild(rot);
   var frames = { walk: [], click: [] };
-  function addFrames(kind, count) {
+  function addFrames(kind, count, prefix) {
+    frames[kind] = [];
     for (var i = 0; i < count; i++) {
       var img = new Image();
       img.alt = '';
       img.draggable = false;
       img.style.cssText = 'position:absolute;left:0;top:0;width:' + SIZE + 'px;height:' + SIZE + 'px;' +
         'user-select:none;-webkit-user-drag:none;visibility:hidden;';
-      img.src = '/ladybug/' + kind + '-' + i + '.png';
+      img.src = (prefix || '/ladybug/' + kind + '-') + i + '.png';
       rot.appendChild(img);
       frames[kind].push(img);
     }
   }
   addFrames('walk', WALK_FRAMES);
   addFrames('click', CLICK_FRAMES);
+
+  // The explosion and the flower pointer. They only matter once a click has been held all the way, so
+  // the art is fetched lazily: when a hold begins (it takes six seconds to get there), or straight away
+  // for a visitor who already has the flower.
+  var flowerArt = false;
+  function loadFlowerArt() {
+    if (flowerArt) return;
+    flowerArt = true;
+    addFrames('explode', EXPLODE_FRAMES);
+    addFrames('fspawn', FSPAWN_FRAMES, '/flower/mouse-spawn-');
+    addFrames('fidle', FIDLE_FRAMES, '/flower/mouse-idle-');
+    addFrames('fstart', FSTART_FRAMES, '/flower/mouse-start-');
+    addFrames('fmove', FMOVE_FRAMES, '/flower/mouse-move-');
+    addFrames('fstop', FSTOP_FRAMES, '/flower/mouse-stop-');
+    addFrames('fclick', FCLICK_FRAMES, '/flower/mouse-click-');
+  }
+
+  function showF(kind, i) { var l = frames[kind]; if (l && l[i]) show(kind, i); }   // the flower art loads lazily: show nothing until it's there
 
   var shownImg = null;
   function show(kind, i) {
@@ -296,6 +324,14 @@
   var bgAmt = 0, bgShown = '';       // how far the page has turned red (0 = white, 1 = the ladybug's red)
   var shadowHeld = false;            // is the shadow in its tightened (click held) state?
   var holdStarted = false;           // have the held-click loops begun?
+  // The pointer's life: the ladybug ('bug'); then, when a click is held until the page is fully red, it
+  // blows up ('explode'), a flower grows where it was ('spawn'), and the flower is the pointer from then on ('flower').
+  // The flower stays for the rest of this visit (this tab), across pages; a new visit starts with the ladybug again.
+  var stage = 'bug', stageAt = 0;
+  var fState = 'idle', fSince = 0;   // flower pointer: 'idle' | 'start' | 'move' | 'stop'
+  var bgReleaseMs = BG_RELEASE_MS;
+  try { if (window.sessionStorage.getItem('elue-flower') === '1') stage = 'flower'; } catch (e) {}
+  if (stage === 'flower') loadFlowerArt();
   var lastBx = 0, lastBy = 0, speedNow = 0;   // for the scurry sound: how fast the ladybug is moving (px per second)
 
   // wander-mode state
@@ -611,11 +647,14 @@
     lastInput = performance.now();
     onMove(e);
     if (mode !== 'follow') return;
+    if (stage === 'explode' || stage === 'spawn') return;   // the ladybug is gone and the flower isn't up yet
     pressed = true;
     releaseWanted = false;
     releaseAt = 0;
     pressAt = performance.now();
     holdStarted = false;
+    bgReleaseMs = BG_RELEASE_MS;
+    if (stage === 'bug') loadFlowerArt();   // by the time the hold gets to full red, the art is there
     sound.squish();
   }
 
@@ -698,7 +737,7 @@
       var diff = ((target - heading + 540) % 360) - 180;
       heading = Math.abs(diff) < 0.3 ? target : heading + diff * (1 - Math.exp(-dt / TURN_MS));
       place();
-      leaveSteps(bx, by, now);
+      if (stage === 'bug') leaveSteps(bx, by, now); else haveLast = false;   // the flower leaves no footprints
       drawSteps(now);
 
       // scurry sound: its speed follows how fast the ladybug is actually moving, smoothed so it glides
@@ -709,22 +748,30 @@
       var holding = pressed && !releaseWanted;
       if (holding !== shadowHeld) { shadowHeld = holding; bug.style.filter = holding ? SHADOW_HELD : SHADOW; }
       // wandering (the mouse was left still, or it's over a video) or a held click: turn it way down
-      var level = !audible || muted ? 0 : (mode === 'wander' || holding ? IDLE_VOLUME : 1);
+      var level = !audible || muted || stage !== 'bug' ? 0 : (mode === 'wander' || holding ? IDLE_VOLUME : 1);
       // 85 px/s (its wandering pace) plays the recording as it is; faster scampering rises, slower slows down.
       // While a click is held it drags along at half speed, pitched down.
       audio.walk((0.55 + 0.5 * Math.log(1 + speedNow / 60)) * (holding ? HOLD_WALK_RATE : 1), level);
       audio.pan((bx / Math.max(window.innerWidth, 1)) * 2 - 1);   // follows the ladybug across the window
       soundPlaying = level > 0 && audio.live();
-      if (pressed && !releaseWanted) {                       // a held click: after a short wait the loops begin, then swell
+      if (stage === 'bug' && pressed && !releaseWanted) {    // a held click: after a short wait the loops begin, then swell
         var heldFor = now - pressAt - HOLD_DELAY_MS;
-        if (heldFor >= 0) {
+        if (heldFor >= HOLD_RAMP_MS && mode === 'follow') {  // all the way to red: the ladybug explodes
+          audio.holdStop();
+          audio.shot('release', RELEASE_VOLUME * 1.6);       // stand-in bang until there's a real explosion sound
+          stage = 'explode'; stageAt = now;
+          pressed = false; releaseWanted = false; releaseAt = 0;
+          lastInput = now;                                   // the mouse is down and still: don't wander off on the spot
+          bgReleaseMs = BG_EXPLODE_MS;
+          try { window.sessionStorage.setItem('elue-flower', '1'); } catch (e) {}
+        } else if (heldFor >= 0) {
           if (!holdStarted) { holdStarted = true; audio.holdStart(); }
           audio.hold(Math.min(1, heldFor / HOLD_RAMP_MS));
         }
       }
       // the page slowly turns the ladybug's red while a click is held (same slow build as the sound), then back to white
-      if (holding && now - pressAt - HOLD_DELAY_MS > 0) bgAmt = Math.min(1, (now - pressAt - HOLD_DELAY_MS) / HOLD_RAMP_MS);
-      else if (bgAmt > 0) bgAmt = Math.max(0, bgAmt - dt / BG_RELEASE_MS);
+      if (holding && stage === 'bug' && now - pressAt - HOLD_DELAY_MS > 0) bgAmt = Math.min(1, (now - pressAt - HOLD_DELAY_MS) / HOLD_RAMP_MS);
+      else if (bgAmt > 0) bgAmt = Math.max(0, bgAmt - dt / bgReleaseMs);
       var bgNow = bgAmt <= 0 ? '' : 'rgb(' + BG_RED.map(function (c) { return Math.round(255 + (c - 255) * bgAmt); }).join(',') + ')';
       if (bgNow !== bgShown) { bgShown = bgNow; document.body.style.backgroundColor = bgNow; }
 
@@ -743,7 +790,32 @@
         if (out && !pressed && now - lastInput > IDLE_MS) startWander(null, now);
       }
 
-      if (pressed && mode === 'follow') {
+      var walkingNow = legsGoing || (mode === 'follow' && moving);
+      if (stage === 'explode') {
+        var ef = Math.floor((now - stageAt) / EXPLODE_MS);
+        if (ef < EXPLODE_FRAMES) showF('explode', ef);
+        else { stage = 'spawn'; stageAt = now; showF('fspawn', 0); }
+      } else if (stage === 'spawn') {
+        var sf = Math.floor((now - stageAt) / FSPAWN_MS);
+        if (sf < FSPAWN_FRAMES) showF('fspawn', sf);
+        else { stage = 'flower'; fState = 'idle'; fSince = now; }
+      } else if (stage === 'flower') {
+        if (pressed && releaseWanted && now - pressAt >= LEAD_IN_MS * 2) { pressed = false; releaseWanted = false; }
+        if (pressed && !releaseWanted) {                                  // held: the flower opens wide
+          showF('fclick', Math.floor((now - pressAt) / FCLICK_MS) % FCLICK_FRAMES);
+        } else {
+          if (walkingNow) {
+            if (fState === 'idle' || fState === 'stop') { fState = 'start'; fSince = now; }
+            else if (fState === 'start' && now - fSince >= FSTART_FRAMES * FSTART_MS) { fState = 'move'; fSince = now; }
+          } else if (fState === 'start' || fState === 'move') { fState = 'stop'; fSince = now; }
+          else if (fState === 'stop' && now - fSince >= FSTOP_FRAMES * FSTOP_MS) { fState = 'idle'; fSince = now; }
+          var ft = now - fSince;
+          if (fState === 'start') showF('fstart', Math.min(FSTART_FRAMES - 1, Math.floor(ft / FSTART_MS)));
+          else if (fState === 'move') showF('fmove', Math.floor(ft / FMOVE_MS) % FMOVE_FRAMES);
+          else if (fState === 'stop') showF('fstop', Math.min(FSTOP_FRAMES - 1, Math.floor(ft / FSTOP_MS)));
+          else showF('fidle', Math.floor(ft / FIDLE_MS) % FIDLE_FRAMES);
+        }
+      } else if (pressed && mode === 'follow') {
         var pt = now - pressAt;
         var leadIn = LEAD_IN_MS * 2;
         if (releaseWanted && pt >= leadIn) {
