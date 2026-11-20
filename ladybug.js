@@ -55,7 +55,7 @@
   var PAN_WIDTH = 0.9;         // how far the sound swings to each side: 0 = stays centred, 1 = fully into one ear at the window edge
   var PRESS_PITCH = 0.1;       // press and release: pitch (and so length) varies by up to this much either way, each time
   var PRESS_TRIM = [0.75, 1];  // and each time it may also be cut short, to this share of its length
-  var LOOP_START = 0.4;        // held click: the loop starts at this share of its full level (so you hear it straight away)
+  var LOOP_START = 0.06;       // held click: the loop starts at this share of its full level (a quiet start)
   var HOLD_WALK_RATE = 0.5;    // held click: the walk sound slows to this multiple of its speed (and drops in pitch with it)
   var HOLD_RAMP_MS = 6000;     // held click: how long the loop and the scream take to swell to full
   var SCREAM_PITCH_END = 1.5;  // the scream rises to this multiple of its normal pitch by then
@@ -147,9 +147,9 @@
     function hold(p) {   // p: how far through the swell, 0..1
       if (!held) return;
       var t = ctx.currentTime;
-      if (held.loop) held.loop.gain.gain.setTargetAtTime(LOOP_VOLUME * (LOOP_START + (1 - LOOP_START) * p), t, 0.05);   // already audible at once, then swells
+      if (held.loop) held.loop.gain.gain.setTargetAtTime(LOOP_VOLUME * (LOOP_START + (1 - LOOP_START) * p * p), t, 0.05);   // a quiet start, then swells (slowly at first)
       if (held.scream) {
-        held.scream.gain.gain.setTargetAtTime(SCREAM_VOLUME * Math.pow(p, 1.5), t, 0.05);                              // from silence
+        held.scream.gain.gain.setTargetAtTime(SCREAM_VOLUME * Math.pow(p, 3), t, 0.05);                              // from silence
         held.scream.src.playbackRate.setTargetAtTime(1 + (SCREAM_PITCH_END - 1) * p, t, 0.05);
       }
     }
