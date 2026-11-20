@@ -47,14 +47,16 @@
   var SCURRY_VOLUME = 0.8;     // 0..1, for each sound in turn
   var PRESS_VOLUME = 1;
   var RELEASE_VOLUME = 1;
-  var LOOP_VOLUME = 8;         // the held-click recordings are recorded quiet, so these are boosted (above 1 = louder than the file)
-  var SCREAM_VOLUME = 14;
-  var SCURRY_RATE_MIN = 0.5;   // walk sound: slowest it ever plays (1 = the recording as it is)
+  var LOOP_VOLUME = 16;        // the held-click recordings are recorded quiet, so these are boosted (above 1 = louder than the file)
+  var SCREAM_VOLUME = 24;
+  var SCURRY_RATE_MIN = 0.25;  // walk sound: slowest it ever plays (1 = the recording as it is)
   var SCURRY_RATE_MAX = 2.4;   // fastest
   var IDLE_VOLUME = 0.12;      // walk sound while it wanders (mouse left still, or over a video), as a share of full volume
   var PAN_WIDTH = 0.9;         // how far the sound swings to each side: 0 = stays centred, 1 = fully into one ear at the window edge
   var PRESS_PITCH = 0.1;       // press and release: pitch (and so length) varies by up to this much either way, each time
   var PRESS_TRIM = [0.75, 1];  // and each time it may also be cut short, to this share of its length
+  var LOOP_START = 0.4;        // held click: the loop starts at this share of its full level (so you hear it straight away)
+  var HOLD_WALK_RATE = 0.5;    // held click: the walk sound slows to this multiple of its speed (and drops in pitch with it)
   var HOLD_RAMP_MS = 6000;     // held click: how long the loop and the scream take to swell to full
   var SCREAM_PITCH_END = 1.5;  // the scream rises to this multiple of its normal pitch by then
 
@@ -67,7 +69,12 @@
     try {
       ctx = new AC();
       master = ctx.createGain();                       // the mute switch
-      master.connect(ctx.destination);
+      if (ctx.createDynamicsCompressor) {              // a limiter, so loud moments never distort
+        var lim = ctx.createDynamicsCompressor();
+        lim.threshold.value = -8; lim.knee.value = 6; lim.ratio.value = 20; lim.attack.value = 0.003; lim.release.value = 0.15;
+        master.connect(lim);
+        lim.connect(ctx.destination);
+      } else master.connect(ctx.destination);
       if (ctx.createStereoPanner) { panner = ctx.createStereoPanner(); panner.connect(master); }
       bus = panner || master;                          // every sound goes in here
     } catch (e) { return none; }
@@ -137,8 +144,8 @@
     function hold(p) {   // p: how far through the swell, 0..1
       if (!held) return;
       var t = ctx.currentTime;
-      held.loop.gain.gain.setTargetAtTime(LOOP_VOLUME * Math.pow(p, 1.5), t, 0.05);
-      held.scream.gain.gain.setTargetAtTime(SCREAM_VOLUME * Math.pow(p, 2.5), t, 0.05);
+      held.loop.gain.gain.setTargetAtTime(LOOP_VOLUME * (LOOP_START + (1 - LOOP_START) * p), t, 0.05);   // already audible at once, then swells
+      held.scream.gain.gain.setTargetAtTime(SCREAM_VOLUME * Math.pow(p, 1.5), t, 0.05);               // from silence
       held.scream.src.playbackRate.setTargetAtTime(1 + (SCREAM_PITCH_END - 1) * p, t, 0.05);
     }
     function holdStop() {
@@ -682,11 +689,13 @@
       var mdx = bx - lastBx, mdy = by - lastBy;
       lastBx = bx; lastBy = by;
       if (dt > 0) speedNow += (Math.sqrt(mdx * mdx + mdy * mdy) / dt * 1000 - speedNow) * (1 - Math.exp(-dt / 120));
-      var audible = out && !pressed && !document.hidden && (legsGoing || (mode === 'follow' && moving));
-      // wandering (the mouse was left still, or it's over a video): turn it way down
-      var level = !audible || muted ? 0 : (mode === 'wander' ? IDLE_VOLUME : 1);
-      // 85 px/s (its wandering pace) plays the recording as it is; faster scampering rises, slower slows down
-      audio.walk(0.55 + 0.5 * Math.log(1 + speedNow / 60), level);
+      var audible = out && !document.hidden && (legsGoing || (mode === 'follow' && moving));
+      var holding = pressed && !releaseWanted;
+      // wandering (the mouse was left still, or it's over a video) or a held click: turn it way down
+      var level = !audible || muted ? 0 : (mode === 'wander' || holding ? IDLE_VOLUME : 1);
+      // 85 px/s (its wandering pace) plays the recording as it is; faster scampering rises, slower slows down.
+      // While a click is held it drags along at half speed, pitched down.
+      audio.walk((0.55 + 0.5 * Math.log(1 + speedNow / 60)) * (holding ? HOLD_WALK_RATE : 1), level);
       audio.pan((bx / Math.max(window.innerWidth, 1)) * 2 - 1);   // follows the ladybug across the window
       soundPlaying = level > 0 && audio.live();
       if (pressed && !releaseWanted) audio.hold(Math.min(1, (now - pressAt) / HOLD_RAMP_MS));   // a held click swells
